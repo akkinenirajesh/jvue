@@ -12,72 +12,86 @@ import com.j2js.visitors.AbstractVisitor;
  * @author kuehn
  */
 public class MethodInvocation extends Expression {
-	
+
 	private Expression expression;
-    private MethodDeclaration methodDecl;
+	private MethodDeclaration methodDecl;
 
 	/**
-     * Special handling for superclass, private, and instance initialization method invocations.
+	 * Special handling for superclass, private, and instance initialization
+	 * method invocations.
 	 */
 	public boolean isSpecial = false;
 	private MethodBinding methodBinding;
-    
-    public MethodInvocation() {
-    }
-    
-    public MethodInvocation(MethodDeclaration theMethodDecl) {
-        methodDecl = theMethodDecl;
-    }
-    
-    public MethodInvocation(MethodDeclaration theMethodDecl, MethodBinding theMethodBinding) {
-        methodDecl = theMethodDecl;
-        setMethodBinding(theMethodBinding);
-    }
-    
-	public Type getTypeBinding() {
-        if (methodBinding == null) return super.getTypeBinding();
-        return methodBinding.getReturnType();
-    }
-    
-    /**
-     * Returns true if this method invocation applies to a super class of the specified class.
-     */
-    public boolean isSuper(String currentClassName) {
-        if (!isSpecial) return false;
-        // Use resolved class unless
-        // 1) the resolved method is not an instance initialization method,
-        if (methodBinding.isConstructor()) return false;
-        // 2) and the class of the resolved method is a superclass of the current class and
-        String name = methodBinding.getDeclaringClass().getClassName();
-        if (currentClassName.equals(name)) return false;
-        
-        // TODO: The resolved class is different from the current class, but this does not imply that
-        // the resolved class is a superclass! Problem: How do we get this information without loading
-        // the class hierarchy? 
-        return true;
-    }
 
-    /**
-	 * @return Returns the arguments.
-	 */
-	public List getArguments() {
-        ASTNodeStack stack = new ASTNodeStack();
-        ASTNode node = getFirstChild();
-        if (expression != null) {
-            node = node.getNextSibling();
-        }
-        
-        while (node != null) {
-            stack.add(node);
-            node = node.getNextSibling();
-        }
-        
-        return stack;
-        
+	public MethodInvocation() {
+	}
+
+	public MethodInvocation(MethodDeclaration theMethodDecl) {
+		methodDecl = theMethodDecl;
+	}
+
+	public MethodInvocation(MethodDeclaration theMethodDecl, MethodBinding theMethodBinding) {
+		methodDecl = theMethodDecl;
+		setMethodBinding(theMethodBinding);
+	}
+
+	public Type getTypeBinding() {
+		if (methodBinding == null)
+			return super.getTypeBinding();
+		return methodBinding.getReturnType();
+	}
+
+	public MethodDeclaration getMethodDecl() {
+		return methodDecl;
 	}
 
 	/**
-	 * @param arguments The arguments to set.
+	 * Returns true if this method invocation applies to a super class of the
+	 * specified class.
+	 */
+	public boolean isSuper(String currentClassName) {
+		if (!isSpecial)
+			return false;
+		// Use resolved class unless
+		// 1) the resolved method is not an instance initialization method,
+		if (methodBinding.isConstructor())
+			return false;
+		// 2) and the class of the resolved method is a superclass of the
+		// current class and
+		String name = methodBinding.getDeclaringClass().getClassName();
+		if (currentClassName.equals(name))
+			return false;
+
+		// TODO: The resolved class is different from the current class, but
+		// this does not imply that
+		// the resolved class is a superclass! Problem: How do we get this
+		// information without loading
+		// the class hierarchy?
+		return true;
+	}
+
+	/**
+	 * @return Returns the arguments.
+	 */
+	public List getArguments() {
+		ASTNodeStack stack = new ASTNodeStack();
+		ASTNode node = getFirstChild();
+		if (expression != null) {
+			node = node.getNextSibling();
+		}
+
+		while (node != null) {
+			stack.add(node);
+			node = node.getNextSibling();
+		}
+
+		return stack;
+
+	}
+
+	/**
+	 * @param arguments
+	 *            The arguments to set.
 	 */
 	public void addArgument(Expression argument) {
 		widen(argument);
@@ -92,7 +106,8 @@ public class MethodInvocation extends Expression {
 	}
 
 	/**
-	 * @param expression The expression to set.
+	 * @param expression
+	 *            The expression to set.
 	 */
 	public void setExpression(Expression targetExpression) {
 		if (expression != null) {
@@ -104,15 +119,15 @@ public class MethodInvocation extends Expression {
 	}
 
 	public void visit(AbstractVisitor visitor) {
-	    visitor.visit(this);
-    }
+		visitor.visit(this);
+	}
 
-    public MethodBinding getMethodBinding() {
-        return methodBinding;
-    }
+	public MethodBinding getMethodBinding() {
+		return methodBinding;
+	}
 
-    public void setMethodBinding(MethodBinding theMethodBinding) {
-        methodBinding = theMethodBinding;
-        Project.getSingleton().addReference(methodDecl, this);
-    }
+	public void setMethodBinding(MethodBinding theMethodBinding) {
+		methodBinding = theMethodBinding;
+		Project.getSingleton().addReference(methodDecl, this);
+	}
 }

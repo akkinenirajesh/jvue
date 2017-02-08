@@ -12,6 +12,7 @@ import java.util.Map;
 import com.j2js.FileManager;
 import com.j2js.FileObject;
 import com.j2js.Log;
+import com.j2js.dom.TypeDeclaration;
 
 /**
  * Instances of ClassUnit represent classes and interfaces managed by a project.
@@ -57,6 +58,8 @@ public class ClassUnit extends Unit {
     private transient FileObject classFile;
 
     private transient FileManager fileManager;
+    
+    public transient TypeDeclaration typeDecl;
 
     public ClassUnit() {
     }

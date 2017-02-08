@@ -15,12 +15,10 @@ import com.j2js.Utils;
 public class JavaGenerator extends Generator {
 
     /** Creates a new instance of Generator */
-    public JavaGenerator(J2JSCompiler compiler) {
-        super(compiler);
+    public JavaGenerator() {
     }
 
-    public JavaGenerator(PrintStream targetStream, J2JSCompiler compiler) {
-        super(compiler);
+    public JavaGenerator(PrintStream targetStream) {
         setOutputStream(targetStream);
     }
 

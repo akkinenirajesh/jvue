@@ -31,7 +31,7 @@ public final class Utils {
         try {
             properties.load(Utils.class.getClassLoader().getResourceAsStream(propertiesFile));
         } catch (Exception e) {
-            J2JSCompiler.errorCount++;
+        	J2JSSettings.errorCount++;
             Log.getLogger().error("Could not read from classpath: " + propertiesFile);
             throw new RuntimeException(e);
         }
@@ -58,7 +58,7 @@ public final class Utils {
     
     public static RuntimeException generateException(Throwable e, MethodDeclaration methodDecl, ASTNode node) {
         String msg = generateExceptionMessage(methodDecl, node);
-        J2JSCompiler.errorCount++;
+        J2JSSettings.errorCount++;
         Log.getLogger().error(msg);
         return new RuntimeException(msg, e);
     }

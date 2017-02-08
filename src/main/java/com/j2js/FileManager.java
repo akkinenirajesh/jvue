@@ -1,7 +1,5 @@
 package com.j2js;
 
-import com.j2js.J2JSCompiler;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,74 +20,74 @@ import java.util.jar.JarFile;
  */
 public class FileManager {
 
-    private List<Object> path = new ArrayList<Object>();
+	private List<Object> path = new ArrayList<Object>();
 
-    private ClassLoader classLoader;
+	private ClassLoader classLoader;
 
-    private long compiledTime;
+	private long compiledTime;
 
-    /**
-     * Create a new FileManager.
-     * 
-     * @param classPath
-     *            list of file system directories or jar files.
-     * @param classLoader
-     */
-    public FileManager(List<File> classPath, ClassLoader classLoader) {
-        this.classLoader = classLoader;
-        this.compiledTime = new Date().getTime();
-        Log.getLogger().info("Resolving class path " + classPath);
+	/**
+	 * Create a new FileManager.
+	 * 
+	 * @param classPath
+	 *            list of file system directories or jar files.
+	 * @param classLoader
+	 */
+	public FileManager(List<File> classPath, ClassLoader classLoader) {
+		this.classLoader = classLoader;
+		this.compiledTime = new Date().getTime();
+		Log.getLogger().info("Resolving class path " + classPath);
 
-        // Replace all jar files on classPath by instances of JarFile.
-        // Non-existing files are sorted out.
-        for (File file : classPath) {
-            if (!file.exists()) {
-                J2JSCompiler.errorCount++;
-                Log.getLogger().error("Cannot find resource on class path: "
-                        + file.getAbsolutePath());
-                continue;
-            }
+		// Replace all jar files on classPath by instances of JarFile.
+		// Non-existing files are sorted out.
+		for (File file : classPath) {
+			if (!file.exists()) {
+				J2JSSettings.errorCount++;
+				Log.getLogger().error("Cannot find resource on class path: " + file.getAbsolutePath());
+				continue;
+			}
 
-            if (file.getName().endsWith(".jar")) {
-                try {
-                    path.add(new JarFile(file));
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            } else {
-                path.add(file);
-            }
-        }
-    }
+			if (file.getName().endsWith(".jar")) {
+				try {
+					path.add(new JarFile(file));
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			} else {
+				path.add(file);
+			}
+		}
+	}
 
-    /**
-     * Resolves a file given by name along the class path.
-     */
-    public FileObject getFileForInput(String relativeName) {
-        for (Object o : path) {
-            if (o instanceof JarFile) {
-                JarFile jarFile = (JarFile) o;
-                JarEntry entry = jarFile.getJarEntry(relativeName);
-                if (entry != null) {
-                    return new FileObject(jarFile, entry);
-                }
-            } else {
-                File file = new File(((File) o), relativeName);
-                if (file.exists()) {
-                    return new FileObject(file);
-                }
-            }
-        }
-        if (classLoader != null) {
-            try {
-                InputStream in = classLoader.getResourceAsStream(relativeName);
-                return new FileObject(in, compiledTime);
-            } catch (Exception e) {
-            }
-        }
+	/**
+	 * Resolves a file given by name along the class path.
+	 */
+	public FileObject getFileForInput(String relativeName) {
+		for (Object o : path) {
+			if (o instanceof JarFile) {
+				JarFile jarFile = (JarFile) o;
+				JarEntry entry = jarFile.getJarEntry(relativeName);
+				if (entry != null) {
+					return new FileObject(jarFile, entry);
+				}
+			} else {
+				File file = new File(((File) o), relativeName);
+				if (file.exists()) {
+					return new FileObject(file);
+				}
+			}
+		}
+		if (classLoader != null) {
+			try {
+				InputStream in = classLoader.getResourceAsStream(relativeName);
+				if (in != null) {
+					return new FileObject(in, compiledTime);
+				}
+			} catch (Exception e) {
+			}
+		}
 
-        throw new RuntimeException(
-                "Could not find " + relativeName + " on class path");
-    }
+		throw new RuntimeException("Could not find " + relativeName + " on class path");
+	}
 
 }

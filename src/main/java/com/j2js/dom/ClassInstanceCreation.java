@@ -8,17 +8,23 @@ import com.j2js.visitors.AbstractVisitor;
  * @author wolfgang
  */
 public class ClassInstanceCreation extends MethodInvocation {
-	
-    public ClassInstanceCreation(ObjectType theType) {
-        type = theType;
-    }
-    
-    public ClassInstanceCreation(MethodDeclaration methodDecl, MethodBinding methodBinding) {
-        super(methodDecl, methodBinding);
-    }
-    
-	public void visit(AbstractVisitor visitor) {
-	    visitor.visit(this);
-    }
 
+	private ObjectType theType;
+
+	public ClassInstanceCreation(ObjectType theType) {
+		this.theType = theType;
+		type = theType;
+	}
+
+	public ClassInstanceCreation(MethodDeclaration methodDecl, MethodBinding methodBinding) {
+		super(methodDecl, methodBinding);
+	}
+
+	public void visit(AbstractVisitor visitor) {
+		visitor.visit(this);
+	}
+
+	public ObjectType getCreationType() {
+		return theType;
+	}
 }

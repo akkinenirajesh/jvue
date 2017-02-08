@@ -4,13 +4,11 @@ import java.io.IOException;
 import java.lang.reflect.Modifier;
 
 import org.apache.bcel.classfile.AnnotationEntry;
-import org.apache.bcel.classfile.Attribute;
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.ConstantPool;
 import org.apache.bcel.classfile.Field;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.Method;
-import org.apache.bcel.classfile.ParameterAnnotationEntry;
 import org.apache.bcel.generic.ObjectType;
 import org.apache.bcel.generic.Type;
 
@@ -45,11 +43,8 @@ public class Parser {
 
     private ClassUnit fileUnit;
 
-    private J2JSCompiler compiler;
-
-    public Parser(ClassUnit theFileUnit, J2JSCompiler compiler) {
+    public Parser(ClassUnit theFileUnit) {
         fileUnit = theFileUnit;
-        this.compiler = compiler;
         try {
             ClassParser cp = new ClassParser(
                     fileUnit.getClassFile().openInputStream(),
@@ -121,10 +116,10 @@ public class Parser {
             MethodBinding binding = MethodBinding.lookup(jc.getClassName(),
                     method.getName(), method.getSignature());
 
-            if (compiler.getSingleEntryPoint() != null) {
+            if (J2JSSettings.getSingleEntryPoint() != null) {
                 Signature signature = Project.getSingleton()
                         .getSignature(binding.toString());
-                String singleSignature = compiler.getSingleEntryPoint();
+                String singleSignature = J2JSSettings.getSingleEntryPoint();
                 if (!signature.toString().equals(singleSignature))
                     continue;
             }
@@ -168,7 +163,7 @@ public class Parser {
             return;
 
         Log.getLogger().debug("Parsing " + methodDecl.toString());
-        Pass1 pass1 = new Pass1(jc, compiler);
+        Pass1 pass1 = new Pass1(jc);
 
         try {
             pass1.parse(method, methodDecl);
@@ -180,11 +175,11 @@ public class Parser {
                 node = Pass1.getCurrentNode();
             }
 
-            if (compiler.isFailOnError()) {
+            if (J2JSSettings.failOnError) {
                 throw Utils.generateException(ex, methodDecl, node);
             } else {
                 String msg = Utils.generateExceptionMessage(methodDecl, node);
-                J2JSCompiler.errorCount++;
+                J2JSSettings.errorCount++;
                 Log.getLogger()
                         .error(msg + "\n" + Utils.stackTraceToString(ex));
             }
@@ -205,7 +200,7 @@ public class Parser {
         }
 
         // Remove from body last expressionless return statement.
-        if (compiler.optimize && methodDecl.getBody()
+        if (J2JSSettings.optimize && methodDecl.getBody()
                 .getLastChild() instanceof ReturnStatement) {
             ReturnStatement ret = (ReturnStatement) methodDecl.getBody()
                     .getLastChild();
@@ -214,7 +209,7 @@ public class Parser {
             }
         }
 
-        Pass1.dump(compiler, methodDecl.getBody(),
+        Pass1.dump(methodDecl.getBody(),
                 "Body of " + methodDecl.toString());
 
         // if (typeDecl.getClassName().equals("java.lang.String")) {

@@ -27,6 +27,8 @@ public class MethodDeclaration extends ASTNode {
     private Code code;
     private MethodBinding methodBinding;
     private LineNumberCursor lineNumberCursor;
+    
+    public boolean visited;
 
     public MethodDeclaration(MethodBinding theMethodBinding, int theAccessFlags, Code theCode) {
         methodBinding = theMethodBinding;

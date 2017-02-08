@@ -24,10 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.j2js.assembly.Project;
-import com.j2js.ext.ExtensibleGenerator;
-import com.j2js.ext.ExtensionsProvider;
-import com.j2js.ext.ExtensionsRegistry;
 import com.j2js.visitors.Generator;
+import com.j2js.visitors.JavaScriptGenerator;
 
 /**
  * The cross-compiler translates Java class files into JavaScript code and
@@ -39,8 +37,6 @@ import com.j2js.visitors.Generator;
  * @author Wolfgang Kuehn
  */
 public class J2JSCompiler {
-
-	public static int errorCount = 0;
 
 	public Writer writer;
 
@@ -58,29 +54,15 @@ public class J2JSCompiler {
 
 	public FileManager fileManager;
 
-	public boolean optimize = true;
-
-	public boolean failOnError = true;
-
-	private boolean compression = true;
-
 	private String singleEntryPoint;
 
 	private String targetPlatform;
 
-	public int reductionLevel = 5;
-
 	private int junkSizeInKiloBytes = Integer.MAX_VALUE;
-
-	private boolean generateLineNumbers = false;
-
-	public int compileCount = 0;
 
 	public Generator generator;
 
 	private Log logger;
-
-	private ExtensionsProvider provider;
 
 	// Begin main
 	public static void main(String argv[]) throws Exception {
@@ -105,7 +87,6 @@ public class J2JSCompiler {
 		assembly.setEntryPointClassName(entryPointClassName);
 		assembly.setTargetLocation(new File(basedir, argv[3]));
 		compiler.addAssembly(assembly);
-		compiler.setGenerateLineNumbers(true);
 		compiler.execute();
 	}
 	// End main
@@ -116,13 +97,9 @@ public class J2JSCompiler {
 	public J2JSCompiler() {
 		setBasedir(new File(System.getProperty("user.dir")));
 		setTargetPlatform("javascript");
-		addClasspathElements("j2js-libs/j2js-jre.jar;j2js-libs/j2js-agent.jar");
+		// addClasspathElements("libs/j2js-jre.jar;libs/j2js-agent.jar");
+		addClasspathElements("libs/j4ts.jar;libs/jsweet-core.jar");
 		setBasedir(new File("."));
-		provider = new ExtensionsProvider();
-	}
-
-	public ExtensionsRegistry getExtensionsRegistry() {
-		return provider;
 	}
 
 	public void execute() throws Exception {
@@ -167,11 +144,12 @@ public class J2JSCompiler {
 		logger.info("Creating assembly " + assembly.getTargetLocation());
 
 		fileManager = new FileManager(classpath, classLoader);
-		Project project = Project.createSingleton(getCacheFile(), this);
+		Project project = Project.createSingleton(getCacheFile());
 		assembly.setProject(project);
 		generator = createGenerator(project);
-
-		errorCount = 0;
+		project.generator = generator;
+		project.fileManager = fileManager;
+		J2JSSettings.errorCount = 0;
 
 		assembly.addEntryPoint(assembly.getEntryPointClassName() + "#main(java.lang.String[])void");
 
@@ -184,10 +162,11 @@ public class J2JSCompiler {
 		// Used by the JavaScript JVM. The static code analyser would miss
 		// these.
 
-		String[] signatures = Utils.getProperty("j2js.preTaintedSignatures").split(";");
-		for (int i = 0; i < signatures.length; i++) {
-			assembly.taint(signatures[i]);
-		}
+		// String[] signatures =
+		// Utils.getProperty("j2js.preTaintedSignatures").split(";");
+		// for (int i = 0; i < signatures.length; i++) {
+		// assembly.taint(signatures[i]);
+		// }
 
 		if (getSingleEntryPoint() != null) {
 			assembly.processSingle(project.getSignature(getSingleEntryPoint()));
@@ -206,17 +185,17 @@ public class J2JSCompiler {
 			throw new Exception("Error while creating assembly", e);
 		}
 
-		logger.info(timesName("Compiled|Compiled", compileCount, "class|classes") + ", "
+		logger.info(timesName("Compiled|Compiled", J2JSSettings.compileCount, "class|classes") + ", "
 				+ timesName("packed|packed", methodCount, "method|methods") + ".");
 		logger.info("Execution time was " + (System.currentTimeMillis() - startTime) + " millis.");
 
-		if (errorCount > 0) {
-			logger.error("There " + timesName("was|were", errorCount, "error|errors") + ".");
+		if (J2JSSettings.errorCount > 0) {
+			logger.error("There " + timesName("was|were", J2JSSettings.errorCount, "error|errors") + ".");
 		}
 	}
 
 	protected Generator createGenerator(Project project) {
-		return new ExtensibleGenerator(provider, project, this);
+		return new JavaScriptGenerator(project);
 	}
 
 	private String timesName(String verb, int count, String noun) {
@@ -224,14 +203,6 @@ public class J2JSCompiler {
 		String[] nouns = noun.split("\\|");
 		int index = (count == 1 ? 0 : 1);
 		return verbs[index] + " " + count + " " + nouns[index];
-	}
-
-	public void setCompression(boolean isCompression) {
-		this.compression = isCompression;
-	}
-
-	public boolean isCompression() {
-		return compression;
 	}
 
 	/**
@@ -313,14 +284,6 @@ public class J2JSCompiler {
 		}
 	}
 
-	public void setFailOnError(boolean flag) {
-		failOnError = flag;
-	}
-
-	public boolean isFailOnError() {
-		return failOnError;
-	}
-
 	public File getCacheFile() {
 		return cacheFile;
 	}
@@ -335,14 +298,6 @@ public class J2JSCompiler {
 
 	public void setAssemlies(List<com.j2js.Assembly> assemblies) {
 		this.assemblies = assemblies;
-	}
-
-	public void setGenerateLineNumbers(boolean theGenerateLineNumbers) {
-		generateLineNumbers = theGenerateLineNumbers;
-	}
-
-	public boolean isGenerateLineNumbers() {
-		return generateLineNumbers;
 	}
 
 	public void setJunkSizeInKiloBytes(int junkSizeInKiloBytes) {

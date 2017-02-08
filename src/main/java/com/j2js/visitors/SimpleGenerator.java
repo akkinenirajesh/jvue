@@ -16,8 +16,7 @@ public class SimpleGenerator extends AbstractVisitor {
 
     private PrintStream out;
 
-    public SimpleGenerator(PrintStream theOut, J2JSCompiler compiler) {
-        super(compiler);
+    public SimpleGenerator(PrintStream theOut) {
         out = theOut;
     }
 

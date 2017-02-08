@@ -3,7 +3,6 @@
  */
 package com.j2js.visitors;
 
-import com.j2js.J2JSCompiler;
 import com.j2js.dom.ASTNode;
 import com.j2js.dom.ArrayAccess;
 import com.j2js.dom.ArrayCreation;
@@ -23,13 +22,13 @@ import com.j2js.dom.FieldAccess;
 import com.j2js.dom.IfStatement;
 import com.j2js.dom.InfixExpression;
 import com.j2js.dom.InstanceofExpression;
-import com.j2js.dom.Name;
-import com.j2js.dom.PostfixExpression;
-import com.j2js.dom.PrefixExpression;
 import com.j2js.dom.MethodDeclaration;
 import com.j2js.dom.MethodInvocation;
+import com.j2js.dom.Name;
 import com.j2js.dom.NullLiteral;
 import com.j2js.dom.NumberLiteral;
+import com.j2js.dom.PostfixExpression;
+import com.j2js.dom.PrefixExpression;
 import com.j2js.dom.PrimitiveCast;
 import com.j2js.dom.ReturnStatement;
 import com.j2js.dom.StringLiteral;
@@ -48,12 +47,6 @@ import com.j2js.dom.WhileStatement;
  * Copyright by Wolfgang Kuehn 2005
  */
 public abstract class AbstractVisitor {
-
-    protected J2JSCompiler compiler;
-
-    public AbstractVisitor(J2JSCompiler compiler) {
-        this.compiler = compiler;
-    }
 
     public abstract void visit(ASTNode node);
 

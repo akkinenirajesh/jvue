@@ -18,7 +18,7 @@ public class Signature implements Serializable {
 
     private boolean isCompression;
 
-    Signature(String theSignatureString, int theId, boolean isCompression) {
+    public Signature(String theSignatureString, int theId, boolean isCompression) {
         signatureString = theSignatureString;
         id = theId;
         this.isCompression = isCompression;

@@ -1,11 +1,10 @@
 package com.j2js.visitors;
 
-import com.j2js.J2JSCompiler;
-
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 
+import com.j2js.J2JSSettings;
 import com.j2js.Log;
 import com.j2js.dom.TypeDeclaration;
 
@@ -13,7 +12,7 @@ public abstract class Generator extends AbstractVisitor {
 
     final String whiteSpace;
 
-    int depth;
+    protected int depth;
 
     char lastChar;
 
@@ -21,11 +20,10 @@ public abstract class Generator extends AbstractVisitor {
 
     private PrintStream stream;
 
-    TypeDeclaration typeDecl;
+    protected TypeDeclaration typeDecl;
 
-    public Generator(J2JSCompiler compiler) {
-        super(compiler);
-        if (compiler.isCompression()) {
+    public Generator() {
+        if (J2JSSettings.compression) {
             whiteSpace = "";
         } else {
             whiteSpace = " ";
@@ -49,9 +47,9 @@ public abstract class Generator extends AbstractVisitor {
         stream.flush();
     }
 
-    void indent() {
+    public void indent() {
         // No indentation if compression is on.
-        if (compiler.isCompression())
+        if (J2JSSettings.compression)
             return;
         String INDENT = "\t";
         if (indents == null || depth >= indents.length) {
@@ -64,24 +62,26 @@ public abstract class Generator extends AbstractVisitor {
         print(indents[depth]);
     }
 
-    void print(String s) {
+   public Generator print(String s) {
         stream.print(s);
         if (s.length() > 0)
             lastChar = s.charAt(s.length() - 1);
+        return this;
     }
 
-    void println(String s) {
+   public void println(String s) {
         print(s);
         stream.println("");
     }
 
-    void indentln(String s) {
+   public void indentln(String s) {
         indent();
         println(s);
     }
 
-    void indent(String s) {
+   public Generator indent(String s) {
         indent();
         print(s);
+        return this;
     }
 }

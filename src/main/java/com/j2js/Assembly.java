@@ -80,7 +80,7 @@ public class Assembly {
 	private void pipeFileToStream(Writer writer, String relativeFilePath) throws IOException {
 		FileObject fileObject = compiler.fileManager.getFileForInput(relativeFilePath);
 		String content;
-		if (compiler.isCompression()) {
+		if (J2JSSettings.compression) {
 			JavaScriptCompressor compressor = new JavaScriptCompressor();
 			content = compressor.compress(fileObject.openInputStream());
 		} else {
@@ -244,7 +244,7 @@ public class Assembly {
 
 		if (!found) {
 			// logger.severe("No such method: " + signature);
-			throw new RuntimeException("No such method: " + signature);
+			// throw new RuntimeException("No such method: " + signature);
 		}
 
 		// MemberUnit member = clazz.getMember(methodPart);
