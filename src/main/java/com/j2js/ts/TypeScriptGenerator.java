@@ -17,6 +17,7 @@ import com.j2js.dom.Block;
 import com.j2js.dom.ClassInstanceCreation;
 import com.j2js.dom.FieldAccess;
 import com.j2js.dom.FieldRead;
+import com.j2js.dom.InvokeDynamic;
 import com.j2js.dom.MethodBinding;
 import com.j2js.dom.MethodDeclaration;
 import com.j2js.dom.MethodInvocation;
@@ -25,7 +26,6 @@ import com.j2js.dom.ThisExpression;
 import com.j2js.dom.TypeDeclaration;
 import com.j2js.dom.VariableBinding;
 import com.j2js.dom.VariableDeclaration;
-import com.j2js.ts.TypeContext.MethodContext;
 import com.j2js.visitors.JavaScriptGenerator;
 
 public class TypeScriptGenerator extends JavaScriptGenerator {
@@ -97,6 +97,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 		if (method.visited) {
 			return;
 		}
+		this.currentMethodDeclaration = method;
 		method.visited = true;
 		MethodBinding methodBinding = method.getMethodBinding();
 		// Do not generate abstract or native methods.
@@ -211,7 +212,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 		args.addAll(cic.getArguments());
 		generateList(args);
 		print(")");
-		if (type.contains("$")) {
+		if (isAnonymousClass(type)) {
 			compiler.addClass(type);
 		}
 	}
@@ -314,4 +315,19 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 
 		print(normalizeAccess(fr.getName()));
 	}
+
+	public void visit(InvokeDynamic node) {
+		print("(");
+		if (!node.getPrams().isEmpty()) {
+			print(node.getPrams().get(0).getName());
+			for (int i = 1; i < node.getPrams().size(); i++) {
+				print(", ");
+				print(node.getPrams().get(0).getName());
+			}
+		}
+		print(") => {");
+		node.getInvocation().visit(this);
+		print("}");
+	}
+
 }

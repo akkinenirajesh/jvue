@@ -134,4 +134,13 @@ public class TypeDeclaration extends ASTNode {
 		return getSuperType() != null && !getSuperType().getClassName().equals("java.lang.Object");
 	}
 
+	public MethodDeclaration getMethod(String name) {
+		for (MethodDeclaration md : methods) {
+			if (md.getMethodBinding().getName().equals(name)) {
+				return md;
+			}
+		}
+		return null;
+	}
+
 }

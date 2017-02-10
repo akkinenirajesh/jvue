@@ -1,59 +1,100 @@
 package com.j2js;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.bcel.Constants;
+import org.apache.bcel.classfile.Attribute;
+import org.apache.bcel.classfile.BootstrapMethod;
+import org.apache.bcel.classfile.BootstrapMethods;
 //import org.apache.bcel.classfile.*;
 import org.apache.bcel.classfile.ClassFormatException;
+import org.apache.bcel.classfile.Code;
 import org.apache.bcel.classfile.CodeException;
 import org.apache.bcel.classfile.Constant;
-import org.apache.bcel.classfile.ConstantClass;
 import org.apache.bcel.classfile.ConstantCP;
+import org.apache.bcel.classfile.ConstantClass;
 import org.apache.bcel.classfile.ConstantDouble;
 import org.apache.bcel.classfile.ConstantFieldref;
-import org.apache.bcel.classfile.ConstantInteger;
 import org.apache.bcel.classfile.ConstantFloat;
+import org.apache.bcel.classfile.ConstantInteger;
+import org.apache.bcel.classfile.ConstantInvokeDynamic;
 import org.apache.bcel.classfile.ConstantLong;
+import org.apache.bcel.classfile.ConstantMethodHandle;
+import org.apache.bcel.classfile.ConstantMethodType;
 import org.apache.bcel.classfile.ConstantNameAndType;
+import org.apache.bcel.classfile.ConstantPool;
 import org.apache.bcel.classfile.ConstantString;
 import org.apache.bcel.classfile.ConstantUtf8;
 import org.apache.bcel.classfile.JavaClass;
-import org.apache.bcel.classfile.Code;
 import org.apache.bcel.classfile.Method;
-import org.apache.bcel.classfile.ConstantPool;
 import org.apache.bcel.classfile.Utility;
-
 import org.apache.bcel.generic.BasicType;
 import org.apache.bcel.generic.InstructionHandle;
+import org.apache.bcel.generic.InstructionList;
 import org.apache.bcel.generic.InstructionTargeter;
 import org.apache.bcel.generic.ObjectType;
 import org.apache.bcel.generic.Type;
 import org.apache.bcel.util.ByteSequence;
 
+import com.j2js.assembly.Project;
+import com.j2js.assembly.Signature;
 import com.j2js.cfg.ControlFlowGraph;
 import com.j2js.cfg.Node;
 import com.j2js.cfg.SwitchEdge;
 import com.j2js.cfg.TryHeaderNode;
-import com.j2js.dom.*;
+import com.j2js.dom.ASTNode;
+import com.j2js.dom.ArrayAccess;
+import com.j2js.dom.ArrayCreation;
+import com.j2js.dom.ArrayInitializer;
+import com.j2js.dom.Assignment;
+import com.j2js.dom.Block;
+import com.j2js.dom.BooleanExpression;
+import com.j2js.dom.CastExpression;
+import com.j2js.dom.CatchClause;
+import com.j2js.dom.ClassInstanceCreation;
+import com.j2js.dom.ClassLiteral;
+import com.j2js.dom.ConditionalBranch;
+import com.j2js.dom.Expression;
+import com.j2js.dom.FieldAccess;
+import com.j2js.dom.FieldRead;
+import com.j2js.dom.FieldWrite;
+import com.j2js.dom.InfixExpression;
+import com.j2js.dom.InstanceofExpression;
+import com.j2js.dom.InvokeDynamic;
+import com.j2js.dom.Jump;
+import com.j2js.dom.JumpSubRoutine;
+import com.j2js.dom.MethodBinding;
+import com.j2js.dom.MethodDeclaration;
+import com.j2js.dom.MethodInvocation;
+import com.j2js.dom.NoOperation;
+import com.j2js.dom.NullLiteral;
+import com.j2js.dom.NumberLiteral;
+import com.j2js.dom.PrefixExpression;
+import com.j2js.dom.PrimitiveCast;
+import com.j2js.dom.ReturnStatement;
+import com.j2js.dom.StringLiteral;
+import com.j2js.dom.SynchronizedBlock;
+import com.j2js.dom.ThisExpression;
+import com.j2js.dom.ThrowStatement;
+import com.j2js.dom.TryStatement;
+import com.j2js.dom.TypeDeclaration;
+import com.j2js.dom.VariableBinding;
+import com.j2js.dom.VariableDeclaration;
 import com.j2js.visitors.SimpleGenerator;
-import com.j2js.assembly.Project;
-import com.j2js.assembly.Signature;
-
-import org.apache.bcel.generic.InstructionList;
-
-import com.j2js.J2JSCompiler;
-
-import java.io.*;
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.TreeMap;
 
 public class Pass1 {
 
 	private ConstantPool constantPool;
-
+	private BootstrapMethods bootstrapMethods;
 	private ByteSequence bytes;
 
 	private static ASTNode currentNode;
@@ -86,6 +127,7 @@ public class Pass1 {
 	 * accordingly.
 	 */
 	private boolean wide = false;
+	private TypeDeclaration typeDecl;
 
 	public static ASTNode getCurrentNode() {
 		return currentNode;
@@ -93,6 +135,13 @@ public class Pass1 {
 
 	public Pass1(JavaClass jc) {
 		constantPool = jc.getConstantPool();
+		Attribute[] attributes = jc.getAttributes();
+		for (Attribute a : attributes) {
+			if (a instanceof BootstrapMethods) {
+				this.bootstrapMethods = (BootstrapMethods) a;
+				break;
+			}
+		}
 	}
 
 	private CatchClause createCatchClause(TryStatement tryStmt, ExceptionHandler handle) {
@@ -242,7 +291,8 @@ public class Pass1 {
 		}
 	}
 
-	public void parse(Method theMethod, MethodDeclaration theMethodDecl) throws IOException {
+	public void parse(TypeDeclaration typeDecl, Method theMethod, MethodDeclaration theMethodDecl) throws IOException {
+		this.typeDecl = typeDecl;
 		method = theMethod;
 		methodDecl = theMethodDecl;
 
@@ -765,7 +815,7 @@ public class Pass1 {
 	private ASTNode parseInstruction() throws IOException {
 		int currentIndex = bytes.getIndex();
 		short opcode = (short) bytes.readUnsignedByte();
-
+		System.out.println("Opcode: " + opcode + "-> " + Integer.toHexString(opcode));
 		InstructionType instructionType = Const.instructionTypes[opcode];
 
 		Form form = selectForm(instructionType);
@@ -2021,7 +2071,9 @@ public class Pass1 {
 				index = bytes.readUnsignedShort();
 			}
 			Constant constant = constantPool.getConstant(index);
-
+			if (constant == null) {
+				System.out.println();
+			}
 			if (opcode == Const.LDC2_W
 					&& (constant.getTag() != Constants.CONSTANT_Double && constant.getTag() != Constants.CONSTANT_Long))
 				throw new RuntimeException("LDC2_W must load long or double");
@@ -2122,9 +2174,8 @@ public class Pass1 {
 		case Const.XXXUNUSEDXXX:
 			// Format: xxxunusedxxx
 			// Operand stack: ... -> ...
-			logger.info("Byte code contains unused operation (Ignored)");
-			return new NoOperation();
-
+			instruction = buildDynamicInvocation();
+			break;
 		case Const.INVOKEINTERFACE:
 			// Format: invokeinterface, index(short), count(byte), 0(byte)
 			// Operand stack: ..., objectref(), arg1(), ...(), argN() -> ...
@@ -2224,6 +2275,161 @@ public class Pass1 {
 		}
 		currentNode = instruction;
 		return instruction;
+	}
+
+	private Expression buildDynamicInvocation() throws IOException {
+		int dynamicIndex = bytes.readUnsignedShort();
+		bytes.readUnsignedShort();
+		ConstantInvokeDynamic methodRef = (ConstantInvokeDynamic) constantPool.getConstant(dynamicIndex);
+		BootstrapMethod bootstrapMethod = bootstrapMethods.getBootstrapMethods()[methodRef
+				.getBootstrapMethodAttrIndex()];
+		ConstantMethodHandle mh = (ConstantMethodHandle) constantPool
+				.getConstant(bootstrapMethod.getBootstrapMethodRef());
+		int referenceKind = mh.getReferenceKind();// prototype
+		MethodBinding methodBinding = MethodBinding.lookup(mh.getReferenceIndex(), constantPool);
+		List<Expression> callargs2 = new ArrayList<>();
+		switch (DynamicInvokeType.lookup(methodBinding.getName())) {
+		case UNKNOWN:
+		case BOOTSTRAP: {
+			// callargs2 = this.buildInvokeBootstrapArgs(prototype,
+			// dynamicPrototype, bootstrapBehaviour,
+			// bootstrapMethodInfo, methodRef);
+			// List<Expression> dynamicArgs =
+			// this.getNStackRValuesAsExpressions(this.stackConsumed.size());
+			// callargs2.addAll(dynamicArgs);
+			// StaticFunctionInvokation funcCall = new
+			// StaticFunctionInvokation(methodRef, callargs2);
+			// if (this.stackProduced.size() == 0) {
+			// return new ExpressionStatement(funcCall);
+			// }
+			// return new AssignmentSimple(this.getStackLValue(0), funcCall);
+		}
+		case METAFACTORY_1:
+		case METAFACTORY_2: {
+			// callargs2 =
+			// this.buildInvokeDynamicMetaFactoryArgs(bootstrapMethod.getBootstrapArguments(),
+			// methodBinding);
+			break;
+		}
+		case ALTMETAFACTORY_1:
+		case ALTMETAFACTORY_2: {
+			// callargs2 = this.buildInvokeDynamicAltMetaFactoryArgs(prototype,
+			// dynamicPrototype, bootstrapBehaviour,
+			// bootstrapMethodInfo, methodRef);
+			break;
+		}
+		default: {
+			throw new IllegalStateException();
+		}
+		}
+		ConstantMethodHandle staticMethod = (ConstantMethodHandle) constantPool
+				.getConstant(bootstrapMethod.getBootstrapArguments()[1]);
+		methodBinding = MethodBinding.lookup(staticMethod.getReferenceIndex(), constantPool);
+		MethodInvocation inv = new MethodInvocation(methodDecl, methodBinding);
+		MethodDeclaration md = typeDecl.getMethod(methodBinding.getName());
+
+		ConstantNameAndType nameAndType = (ConstantNameAndType) constantPool
+				.getConstant(methodRef.getNameAndTypeIndex(), Constants.CONSTANT_NameAndType);
+		String signature = nameAndType.getSignature(constantPool);
+		int arguments = Type.getArgumentTypes(signature).length;
+		if (!Modifier.isStatic(md.getAccess())) {
+			Expression arg = (Expression) stack.get(stack.size() - arguments);
+			stack.remove(stack.size() - arguments);
+			inv.setExpression(arg);
+			arguments--;
+		}
+
+		int kk = stack.size() - arguments;
+		for (int i = 0; i < arguments; i++) {
+			Expression arg = (Expression) stack.get(kk);
+			stack.remove(kk);
+			inv.addArgument(arg);
+		}
+
+		int lambdaArgs = methodBinding.getParameterTypes().length - arguments;
+		List<VariableDeclaration> vars = new ArrayList<>();
+		for (int i = 0; i < lambdaArgs; i++) {
+			VariableDeclaration declaration = new VariableDeclaration(true);
+			declaration.setName("_p" + i);
+			vars.add(declaration);
+			inv.addArgument(new VariableBinding(declaration));
+		}
+
+		return new InvokeDynamic(vars, inv);
+	}
+
+	private List<Expression> buildInvokeDynamicMetaFactoryArgs(int[] bootstrapArguments, MethodBinding methodRef) {
+		int ARG_OFFSET = 3;
+		Type[] argTypes = methodRef.getParameterTypes();
+		if (bootstrapArguments.length + 3 != argTypes.length) {
+			throw new IllegalStateException(
+					"Dynamic invoke arg count mismatch " + bootstrapArguments.length + "(+3) vs " + argTypes.length);
+		}
+		List<Expression> callargs = new ArrayList<>();
+		callargs.add(new NullLiteral());
+		callargs.add(new NullLiteral());
+		callargs.add(new NullLiteral());
+		for (int x = 0; x < bootstrapArguments.length; ++x) {
+			Constant constant = this.constantPool.getConstant(bootstrapArguments[x]);
+			Expression arg = new ClassLiteral(getTypeFromConstant(constant));
+
+			// TypedLiteral typedLiteral;
+			// JavaTypeInstance expected = argTypes[3 + x];
+			// if (!expected.equals(
+			// (typedLiteral =
+			// Op02WithProcessedDataAndRefs.getBootstrapArg(bootstrapArguments,
+			// x, this.cp))
+			// .getInferredJavaType().getJavaTypeInstance())) {
+			// throw new IllegalStateException("Dynamic invoke Expected " +
+			// expected + ", got " + typedLiteral);
+			// }
+			callargs.add(arg);
+		}
+		return callargs;
+	}
+
+	private Signature getTypeFromConstant(Constant constant) {
+		if (constant instanceof ConstantMethodType) {
+			return Project.getSingleton().getSignature("java.lang.invoke.MethodType");
+		}
+
+		if (constant instanceof ConstantMethodHandle) {
+			return Project.getSingleton().getSignature("java.lang.invoke.MethodHandle");
+		}
+		// if (cpe instanceof ConstantPoolEntryDouble) {
+		// return TypedLiteral.getDouble(((ConstantPoolEntryDouble)
+		// cpe).getValue());
+		// }
+		// if (cpe instanceof ConstantPoolEntryFloat) {
+		// return TypedLiteral.getFloat(((ConstantPoolEntryFloat)
+		// cpe).getValue());
+		// }
+		// if (cpe instanceof ConstantPoolEntryLong) {
+		// return TypedLiteral.getLong(((ConstantPoolEntryLong)
+		// cpe).getValue());
+		// }
+		// if (cpe instanceof ConstantPoolEntryInteger) {
+		// return TypedLiteral.getInt(((ConstantPoolEntryInteger)
+		// cpe).getValue());
+		// }
+		// if (cpe instanceof ConstantPoolEntryString) {
+		// return TypedLiteral.getString(((ConstantPoolEntryString)
+		// cpe).getValue());
+		// }
+		// if (cpe instanceof ConstantPoolEntryClass) {
+		// return TypedLiteral.getClass(((ConstantPoolEntryClass)
+		// cpe).getTypeInstance());
+		// }
+		// if (cpe instanceof ConstantPoolEntryMethodHandle) {
+		// return
+		// TypedLiteral.getMethodHandle((ConstantPoolEntryMethodHandle) cpe,
+		// cp);
+		// }
+		// if (cpe instanceof ConstantPoolEntryMethodType) {
+		// return TypedLiteral.getMethodType((ConstantPoolEntryMethodType)
+		// cpe, cp);
+		// }
+		throw new RuntimeException("Can't turn ConstantPoolEntry into Literal - got " + constant.getTag());
 	}
 
 	ConditionalBranch createConditional(int currentIndex, InfixExpression.Operator operator) throws IOException {

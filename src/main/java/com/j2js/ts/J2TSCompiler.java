@@ -17,7 +17,6 @@ import com.j2js.Utils;
 import com.j2js.assembly.ClassUnit;
 import com.j2js.assembly.Project;
 import com.j2js.dom.TypeDeclaration;
-import com.j2js.ext.j2ts.J2TSExtRegistry;
 import com.j2js.visitors.AbstractVisitor;
 
 public class J2TSCompiler {
@@ -39,7 +38,6 @@ public class J2TSCompiler {
 		addClasspathElements("libs/j4ts.jar;libs/jsweet-core.jar");
 		this.basedir = new File(".");
 		Log.logger = new Log();
-		J2TSExtRegistry.register();
 	}
 
 	public void setBasedir(File basedir) {

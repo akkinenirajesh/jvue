@@ -91,7 +91,7 @@ public class JavaScriptGenerator extends Generator {
 	protected ASTNode currentNode;
 
 	// The code of the currently active method declaration.
-	private MethodDeclaration currentMethodDeclaration;
+	protected MethodDeclaration currentMethodDeclaration;
 
 	protected Project project;
 

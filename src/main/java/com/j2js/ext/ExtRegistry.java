@@ -4,6 +4,8 @@ import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.j2js.ext.j2ts.J2TSExtRegistry;
+
 public class ExtRegistry {
 
 	private static ExtRegistry INS;
@@ -16,6 +18,7 @@ public class ExtRegistry {
 	public static ExtRegistry get() {
 		if (INS == null) {
 			INS = new ExtRegistry();
+			J2TSExtRegistry.register();
 		}
 		return INS;
 	}

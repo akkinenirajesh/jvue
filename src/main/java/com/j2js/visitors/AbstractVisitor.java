@@ -22,6 +22,7 @@ import com.j2js.dom.FieldAccess;
 import com.j2js.dom.IfStatement;
 import com.j2js.dom.InfixExpression;
 import com.j2js.dom.InstanceofExpression;
+import com.j2js.dom.InvokeDynamic;
 import com.j2js.dom.MethodDeclaration;
 import com.j2js.dom.MethodInvocation;
 import com.j2js.dom.Name;
@@ -48,158 +49,161 @@ import com.j2js.dom.WhileStatement;
  */
 public abstract class AbstractVisitor {
 
-    public abstract void visit(ASTNode node);
+	public abstract void visit(ASTNode node);
 
-    public void visit(TypeDeclaration node) {
-        visit((ASTNode) node);
-    }
+	public void visit(TypeDeclaration node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(MethodDeclaration node) {
-        visit((ASTNode) node);
-    }
+	public void visit(MethodDeclaration node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(DoStatement node) {
-        visit((ASTNode) node);
-    }
+	public void visit(DoStatement node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(WhileStatement node) {
-        visit((ASTNode) node);
-    }
+	public void visit(WhileStatement node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(IfStatement node) {
-        visit((ASTNode) node);
-    }
+	public void visit(IfStatement node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(TryStatement node) {
-        visit((ASTNode) node);
-    }
+	public void visit(TryStatement node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(Block node) {
-        visit((ASTNode) node);
-    }
+	public void visit(Block node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(InfixExpression node) {
-        visit((ASTNode) node);
-    }
+	public void visit(InfixExpression node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(PrefixExpression node) {
-        visit((ASTNode) node);
-    }
+	public void visit(PrefixExpression node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(PostfixExpression node) {
-        visit((ASTNode) node);
-    }
+	public void visit(PostfixExpression node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(SwitchStatement node) {
-        visit((ASTNode) node);
-    }
+	public void visit(SwitchStatement node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(SwitchCase node) {
-        visit((ASTNode) node);
-    }
+	public void visit(SwitchCase node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(CatchClause node) {
-        visit((ASTNode) node);
-    }
+	public void visit(CatchClause node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(ReturnStatement node) {
-        visit((ASTNode) node);
-    }
+	public void visit(ReturnStatement node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(Assignment node) {
-        visit((ASTNode) node);
-    }
+	public void visit(Assignment node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(NumberLiteral node) {
-        visit((ASTNode) node);
-    }
+	public void visit(NumberLiteral node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(StringLiteral node) {
-        visit((ASTNode) node);
-    }
+	public void visit(StringLiteral node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(ClassLiteral node) {
-        visit((ASTNode) node);
-    }
+	public void visit(ClassLiteral node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(NullLiteral node) {
-        visit((ASTNode) node);
-    }
+	public void visit(NullLiteral node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(MethodInvocation node) {
-        visit((ASTNode) node);
-    }
+	public void visit(MethodInvocation node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(ClassInstanceCreation node) {
-        visit((ASTNode) node);
-    }
+	public void visit(ClassInstanceCreation node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(ArrayInitializer node) {
-        visit((ASTNode) node);
-    }
+	public void visit(ArrayInitializer node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(ArrayCreation node) {
-        visit((ASTNode) node);
-    }
+	public void visit(ArrayCreation node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(ArrayAccess node) {
-        visit((ASTNode) node);
-    }
+	public void visit(ArrayAccess node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(VariableDeclaration node) {
-        visit((ASTNode) node);
-    }
+	public void visit(VariableDeclaration node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(VariableBinding node) {
-        visit((ASTNode) node);
-    }
+	public void visit(VariableBinding node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(ThisExpression node) {
-        visit((ASTNode) node);
-    }
+	public void visit(ThisExpression node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(FieldAccess node) {
-        visit((ASTNode) node);
-    }
+	public void visit(FieldAccess node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(BreakStatement node) {
-        visit((ASTNode) node);
-    }
+	public void visit(BreakStatement node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(ContinueStatement node) {
-        visit((ASTNode) node);
-    }
+	public void visit(ContinueStatement node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(CastExpression node) {
-        visit((ASTNode) node);
-    }
+	public void visit(CastExpression node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(BooleanLiteral node) {
-        visit((ASTNode) node);
-    }
+	public void visit(BooleanLiteral node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(ThrowStatement node) {
-        visit((ASTNode) node);
-    }
+	public void visit(ThrowStatement node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(Name node) {
-        visit((ASTNode) node);
-    }
+	public void visit(Name node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(InstanceofExpression node) {
-        visit((ASTNode) node);
-    }
+	public void visit(InstanceofExpression node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(ConditionalExpression node) {
-        visit((ASTNode) node);
-    }
+	public void visit(ConditionalExpression node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(SynchronizedBlock node) {
-        visit((ASTNode) node);
-    }
+	public void visit(SynchronizedBlock node) {
+		visit((ASTNode) node);
+	}
 
-    public void visit(PrimitiveCast node) {
-        visit((ASTNode) node);
-    }
+	public void visit(PrimitiveCast node) {
+		visit((ASTNode) node);
+	}
 
+	public void visit(InvokeDynamic node) {
+		visit((ASTNode) node);
+	}
 }
