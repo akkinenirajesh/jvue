@@ -26,6 +26,7 @@ import com.j2js.dom.ThisExpression;
 import com.j2js.dom.TypeDeclaration;
 import com.j2js.dom.VariableBinding;
 import com.j2js.dom.VariableDeclaration;
+import com.j2js.ext.ExtRegistry;
 import com.j2js.visitors.JavaScriptGenerator;
 
 public class TypeScriptGenerator extends JavaScriptGenerator {
@@ -43,9 +44,10 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 
 	public void writeToFile() {
 		if (J2JSSettings.singleFile) {
-			File file = new File(compiler.getBasedir(), "out.ts");
+			File file = new File(compiler.getBasedir(), "out." + J2JSSettings.ext);
 			try {
 				PrintStream ps = new PrintStream(new FileOutputStream(file));
+				ExtRegistry.get().invoke("file.create", ps, null);
 				project.write(ps);
 				ps.flush();
 				ps.close();
@@ -159,14 +161,15 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 		MethodBinding methodBinding = invocation.getMethodBinding();
 		if (invocation.isSpecial) {
 			if (isAnonymousClass(invocation.getMethodDecl().toString())) {
-				print("super");
+				ExtRegistry.get().invoke("super", getOutputStream(), null);
 			} else if (!typeDecl.hasSuperClass() && methodBinding.isConstructor()) {
 				return;
 			} else {
 				if (methodBinding.isConstructor()) {
-					print("super.constructor0");
+					ExtRegistry.get().invoke("super", getOutputStream(), null);
+					print(".constructor0");
 				} else {
-					print("super");
+					ExtRegistry.get().invoke("super", getOutputStream(), null);
 				}
 			}
 		} else if (expression != null) {
@@ -228,7 +231,8 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 		}
 
 		if (decl.getLocation() == VariableDeclaration.NON_LOCAL) {
-			print(decl.getName());
+			ExtRegistry.get().invoke("class.field.decl", getOutputStream(), decl);
+			return;
 		} else {
 			if (decl.getLocation() != VariableDeclaration.LOCAL)
 				throw new RuntimeException("Declaration must be local");
@@ -330,4 +334,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 		print("}");
 	}
 
+	public void visit(ThisExpression reference) {
+		ExtRegistry.get().invoke("this", getOutputStream(), null);
+	}
 }

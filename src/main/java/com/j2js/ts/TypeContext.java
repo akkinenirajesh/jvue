@@ -58,7 +58,7 @@ public class TypeContext {
 		if (list == null) {
 			methods.put(name, list = new ArrayList<>());
 		}
-		MethodContext mc = new MethodContext(type, method, list);
+		MethodContext mc = new MethodContext(this, method, list);
 		list.add(mc);
 		return mc;
 	}

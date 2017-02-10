@@ -6,7 +6,9 @@ import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.j2js.J2JSSettings;
 import com.j2js.dom.TypeDeclaration;
+import com.j2js.ext.ExtRegistry;
 
 public class PkgContext {
 
@@ -60,9 +62,10 @@ public class PkgContext {
 
 	public void write(File base) {
 		clss.forEach((s, st) -> {
-			File file = new File(base, s + ".ts");
+			File file = new File(base, s + "." + J2JSSettings.ext);
 			try {
 				PrintStream single = new PrintStream(new FileOutputStream(file));
+				ExtRegistry.get().invoke("file.create", single, null);
 				st.write(single);
 				single.flush();
 				single.close();

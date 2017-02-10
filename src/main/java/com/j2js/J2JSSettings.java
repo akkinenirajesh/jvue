@@ -18,6 +18,8 @@ public class J2JSSettings {
 
 	public static boolean singleFile = false;
 
+	public static String ext = "ts";
+
 	public static String getSingleEntryPoint() {
 		return null;
 	}

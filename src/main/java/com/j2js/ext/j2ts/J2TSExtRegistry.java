@@ -22,5 +22,12 @@ public class J2TSExtRegistry {
 		r.add("class.name", new ClassName());
 		r.add("class.extends", new ClassExtends());
 		r.add("class.body", new ClassBody());
+
+		r.add("class.field.decl", new ClassFieldDeclaration());
+		r.add("class.fields", new ClassFields());
+
+		r.add("dummy.constructor.params", new DummyConstructorParams());
+		r.add("this", new This());
+		r.add("super", new Super());
 	}
 }

@@ -9,7 +9,6 @@ import java.util.Map;
 
 import org.apache.bcel.generic.Type;
 
-import com.j2js.dom.TypeDeclaration;
 import com.j2js.dom.VariableDeclaration;
 import com.j2js.ext.ExtChain;
 import com.j2js.ext.ExtInvocation;
@@ -24,17 +23,17 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 	@Override
 	public void invoke(PrintStream ps, TypeContext input, ExtChain ch) {
 
-		input.getFieldsStream().write(ps);
+		ExtRegistry.get().invoke("class.fields", ps, input.getFieldsStream());
 
 		Map<String, List<MethodContext>> methods = input.getMethods();
 		List<MethodContext> remove = methods.remove("<init>");
 
 		if (remove != null) {
-			generateMethod(ps, "<init>", remove);
+			generateMethod(ps, input, "<init>", remove);
 		}
 
 		methods.forEach((name, list) -> {
-			generateMethod(ps, name, list);
+			generateMethod(ps, input, name, list);
 		});
 
 		if (remove != null) {
@@ -44,7 +43,7 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 		ch.next(ps, input);
 	}
 
-	private void generateMethod(PrintStream ps, String name, List<MethodContext> list) {
+	private void generateMethod(PrintStream ps, TypeContext input, String name, List<MethodContext> list) {
 		try {
 			if (name.equals("<init>")) {
 				name = "constructor";
@@ -54,7 +53,7 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 				generateMethod(ps, name, list.get(0));
 			} else {
 
-				generateOverloadMethod(ps, name, list);
+				generateOverloadMethod(ps, input, name, list);
 
 				int i = 1;
 				for (MethodContext m : list) {
@@ -68,7 +67,7 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 
 	}
 
-	private void generateOverloadMethod(PrintStream ps, String name, List<MethodContext> list) {
+	private void generateOverloadMethod(PrintStream ps, TypeContext input, String name, List<MethodContext> list) {
 		List<Map<String, String>> parameterReplacers = new ArrayList<>();
 
 		// find max parameters count
@@ -86,11 +85,10 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 			}
 			parameterReplacers.add(replacers);
 		}
-		TypeDeclaration type = list.get(0).getType();
 		String dummyMethodName;
 		if (name.equals("constructor")) {
 			List<MethodContext> dummyList = new ArrayList<>();
-			MethodContext context = new MethodContext(type, null, dummyList);
+			MethodContext context = new MethodContext(input, null, dummyList);
 			dummyList.add(context);
 			context.getParams().append("(");
 			generateParameters(context.getParams(), totalParams);
@@ -102,7 +100,7 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 		}
 
 		List<MethodContext> dummyList = new ArrayList<>();
-		MethodContext context = new MethodContext(type, null, dummyList);
+		MethodContext context = new MethodContext(input, null, dummyList);
 		dummyList.add(context);
 		context.getParams().append("(");
 		generateParameters(context.getParams(), totalParams);
@@ -197,13 +195,7 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 	}
 
 	private void generateParameters(PrintStream ps, int totalParams) {
-		for (int i = 1; i <= totalParams; i++) {
-			if (i != 1) {
-				ps.print(", ");
-			}
-			ps.print("_p" + i);
-			ps.print("?: any");
-		}
+		ExtRegistry.get().invoke("dummy.constructor.params", ps, totalParams);
 	}
 
 	private void generateMethod(PrintStream ps, String name, MethodContext m) {

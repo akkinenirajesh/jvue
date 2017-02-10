@@ -26,7 +26,7 @@ public class ClassDeclaration implements ExtInvocation<TypeContext> {
 
 		ExtRegistry.get().invoke("class.body", ps, input);
 
-		ps.println("}");
+		ps.print("}");
 
 		ch.next(ps, input);
 	}

@@ -11,10 +11,10 @@ public class MethodContext {
 	private TSPrintStream params;
 	private TSPrintStream body;
 	private List<MethodContext> list;
-	private TypeDeclaration type;
+	private TypeContext typeContext;
 
-	public MethodContext(TypeDeclaration type, MethodDeclaration method, List<MethodContext> list) {
-		this.type = type;
+	public MethodContext(TypeContext typeContext, MethodDeclaration method, List<MethodContext> list) {
+		this.typeContext = typeContext;
 		this.method = method;
 		this.list = list;
 		this.params = new TSPrintStream();
@@ -33,8 +33,12 @@ public class MethodContext {
 		return params;
 	}
 
+	public TypeContext getTypeContext() {
+		return typeContext;
+	}
+
 	public TypeDeclaration getType() {
-		return type;
+		return typeContext.getType();
 	}
 
 	public List<MethodContext> getList() {
