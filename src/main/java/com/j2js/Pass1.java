@@ -2285,10 +2285,10 @@ public class Pass1 {
 				.getBootstrapMethodAttrIndex()];
 		ConstantMethodHandle mh = (ConstantMethodHandle) constantPool
 				.getConstant(bootstrapMethod.getBootstrapMethodRef());
-		int referenceKind = mh.getReferenceKind();// prototype
 		MethodBinding methodBinding = MethodBinding.lookup(mh.getReferenceIndex(), constantPool);
 		List<Expression> callargs2 = new ArrayList<>();
-		switch (DynamicInvokeType.lookup(methodBinding.getName())) {
+		DynamicInvokeType lookup = DynamicInvokeType.lookup(methodBinding.getName());
+		switch (lookup) {
 		case UNKNOWN:
 		case BOOTSTRAP: {
 			// callargs2 = this.buildInvokeBootstrapArgs(prototype,
@@ -2324,35 +2324,57 @@ public class Pass1 {
 		}
 		ConstantMethodHandle staticMethod = (ConstantMethodHandle) constantPool
 				.getConstant(bootstrapMethod.getBootstrapArguments()[1]);
+		int referenceKind = staticMethod.getReferenceKind();// prototype
 		methodBinding = MethodBinding.lookup(staticMethod.getReferenceIndex(), constantPool);
 		MethodInvocation inv = new MethodInvocation(methodDecl, methodBinding);
-		MethodDeclaration md = typeDecl.getMethod(methodBinding.getName());
 
 		ConstantNameAndType nameAndType = (ConstantNameAndType) constantPool
 				.getConstant(methodRef.getNameAndTypeIndex(), Constants.CONSTANT_NameAndType);
 		String signature = nameAndType.getSignature(constantPool);
-		int arguments = Type.getArgumentTypes(signature).length;
-		if (!Modifier.isStatic(md.getAccess())) {
-			Expression arg = (Expression) stack.get(stack.size() - arguments);
-			stack.remove(stack.size() - arguments);
+		Type[] argumentTypes = Type.getArgumentTypes(signature);
+		if (argumentTypes.length == 0 && referenceKind == 5) {
+			referenceKind = 8;
+		}
+
+		if (referenceKind == 5 || referenceKind == 7) {
+			Expression arg = (Expression) stack.pop();
 			inv.setExpression(arg);
-			arguments--;
 		}
 
-		int kk = stack.size() - arguments;
-		for (int i = 0; i < arguments; i++) {
-			Expression arg = (Expression) stack.get(kk);
-			stack.remove(kk);
-			inv.addArgument(arg);
+		int arguments = argumentTypes.length - methodBinding.getParameterTypes().length;
+		if (arguments > 0) {
+			int kk = stack.size() - arguments;
+			for (int i = 0; i < arguments; i++) {
+				Expression arg = (Expression) stack.get(kk);
+				stack.remove(kk);
+				inv.addArgument(arg);
+			}
 		}
 
-		int lambdaArgs = methodBinding.getParameterTypes().length - arguments;
+		int lambdaArgs = 0;
+		if (referenceKind == 5) {
+			lambdaArgs = argumentTypes.length;
+		} else if (referenceKind == 6) {
+			lambdaArgs = methodBinding.getParameterTypes().length - argumentTypes.length;
+		} else if (referenceKind == 7) {
+			lambdaArgs = methodBinding.getParameterTypes().length;
+		} else if (referenceKind == 8) {
+			lambdaArgs = methodBinding.getParameterTypes().length + 1;
+		}
+
 		List<VariableDeclaration> vars = new ArrayList<>();
 		for (int i = 0; i < lambdaArgs; i++) {
 			VariableDeclaration declaration = new VariableDeclaration(true);
 			declaration.setName("_p" + i);
 			vars.add(declaration);
-			inv.addArgument(new VariableBinding(declaration));
+		}
+		if (referenceKind == 8) {
+			VariableDeclaration remove = vars.remove(0);
+			inv.setExpression(new VariableBinding(remove));
+			vars.forEach(v -> inv.addArgument(new VariableBinding(v)));
+			vars.add(0, remove);
+		} else {
+			vars.forEach(v -> inv.addArgument(new VariableBinding(v)));
 		}
 
 		return new InvokeDynamic(vars, inv);

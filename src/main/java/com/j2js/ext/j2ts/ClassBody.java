@@ -51,6 +51,16 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 
 			if (list.size() == 1) {
 				generateMethod(ps, name, list.get(0));
+
+				if (name.equals("constructor")) {
+					List<MethodContext> dummyList = new ArrayList<>();
+					MethodContext context = new MethodContext(input, null, dummyList);
+					dummyList.add(context);
+					context.getParams().append("(");
+					generateParameters(context.getParams(), 0);
+					context.getParams().append("){");
+					generateMethod(ps, name + "0", context);
+				}
 			} else {
 
 				generateOverloadMethod(ps, input, name, list);

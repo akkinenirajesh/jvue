@@ -326,7 +326,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 			print(node.getPrams().get(0).getName());
 			for (int i = 1; i < node.getPrams().size(); i++) {
 				print(", ");
-				print(node.getPrams().get(0).getName());
+				print(node.getPrams().get(i).getName());
 			}
 		}
 		print(") => {");
