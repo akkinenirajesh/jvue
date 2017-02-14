@@ -9,20 +9,25 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.bcel.Constants;
+import org.apache.bcel.generic.ObjectType;
 
 import com.j2js.J2JSSettings;
 import com.j2js.assembly.Project;
 import com.j2js.dom.ASTNode;
 import com.j2js.dom.Block;
+import com.j2js.dom.CastExpression;
 import com.j2js.dom.ClassInstanceCreation;
 import com.j2js.dom.FieldAccess;
 import com.j2js.dom.FieldRead;
+import com.j2js.dom.InstanceofExpression;
 import com.j2js.dom.InvokeDynamic;
 import com.j2js.dom.MethodBinding;
 import com.j2js.dom.MethodDeclaration;
 import com.j2js.dom.MethodInvocation;
+import com.j2js.dom.PrimitiveCast;
 import com.j2js.dom.ReturnStatement;
 import com.j2js.dom.ThisExpression;
+import com.j2js.dom.ThrowStatement;
 import com.j2js.dom.TypeDeclaration;
 import com.j2js.dom.VariableBinding;
 import com.j2js.dom.VariableDeclaration;
@@ -39,7 +44,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	public TypeScriptGenerator(J2TSCompiler compiler) {
 		super(Project.getSingleton());
 		this.compiler = compiler;
-		this.project = new PkgContext(null, "");
+		this.project = new PkgContext();
 	}
 
 	public void writeToFile() {
@@ -75,22 +80,19 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 
 		setOutputStream(context.getFieldsStream());
 
-		List fields = type.getFields();
-		for (int i = 0; i < fields.size(); i++) {
-			VariableDeclaration decl = (VariableDeclaration) fields.get(i);
-			// Do not generate static field declaration.
-			if (Modifier.isStatic(decl.getModifiers()))
-				continue;
+		List<VariableDeclaration> fields = type.getFields();
+		ExtRegistry.get().reduce("fields", fields, decl -> {
 			indent();
 			decl.visit(this);
 			println(";");
-		}
+		});
+
 		setOutputStream(null);
 
 		MethodDeclaration[] methods = type.getMethods();
-		for (MethodDeclaration m : methods) {
+		ExtRegistry.get().reduce("methods", methods, m -> {
 			m.visit(this);
-		}
+		});
 
 		depth--;
 	}
@@ -101,6 +103,10 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 		}
 		this.currentMethodDeclaration = method;
 		method.visited = true;
+		if (Modifier.isVolatile(method.getAccess())) {
+			return;
+		}
+
 		MethodBinding methodBinding = method.getMethodBinding();
 		// Do not generate abstract or native methods.
 		if (method.getBody() == null) {
@@ -310,7 +316,8 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	public void visit(FieldAccess fr) {
 		ASTNode expression = fr.getExpression();
 		if (expression == null) {
-			print(fr.getType().getClassName());
+			context.addImports(fr.getType());
+			print(TSHelper.getSimpleName(fr.getType().getClassName()));
 		} else if (expression instanceof ThisExpression) {
 			expression.visit(this);
 		} else if (expression instanceof VariableBinding) {
@@ -334,7 +341,28 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 		print("}");
 	}
 
+	public void visit(InstanceofExpression node) {
+		node.getLeftOperand().visit(this);
+		print(" instanceof ");
+		ObjectType rightOperand = (ObjectType) node.getRightOperand();
+		context.addImports(rightOperand);
+		print(TSHelper.getSimpleName(rightOperand.getClassName()));
+	}
+
 	public void visit(ThisExpression reference) {
 		ExtRegistry.get().invoke("this", getOutputStream(), null);
+	}
+
+	public void visit(ThrowStatement node) {
+		print("throw ");
+		node.getExpression().visit(this);
+	}
+
+	public void visit(CastExpression cast) {
+		cast.getExpression().visit(this);
+	}
+
+	public void visit(PrimitiveCast node) {
+		node.getExpression().visit(this);
 	}
 }

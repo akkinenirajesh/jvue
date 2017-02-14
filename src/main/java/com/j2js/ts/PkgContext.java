@@ -3,8 +3,15 @@ package com.j2js.ts;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
+
+import org.apache.bcel.generic.ObjectType;
 
 import com.j2js.J2JSSettings;
 import com.j2js.dom.TypeDeclaration;
@@ -12,24 +19,15 @@ import com.j2js.ext.ExtRegistry;
 
 public class PkgContext {
 
-	private Map<String, PkgContext> pkgs = new HashMap<>();
 	private Map<String, TypeContext> clss = new HashMap<>();
-	private PkgContext parent;
-	private String name;
+	private List<String> orderedClasses = new ArrayList<>();
 
-	public PkgContext(PkgContext parent, String name) {
-		this.parent = parent;
-		this.name = name;
+	public PkgContext() {
 	}
 
 	public TypeContext get(TypeDeclaration type) {
 		String name = type.getClassName();
-		String[] split = name.split("\\.");
-		PkgContext pkg = this;
-		for (int i = 0; i < split.length - 1; i++) {
-			pkg = pkg.getPkg(split[i]);
-		}
-		return pkg.getType(type, split[split.length - 1]);
+		return getType(type, name);
 	}
 
 	private TypeContext getType(TypeDeclaration type, String name) {
@@ -40,6 +38,7 @@ public class PkgContext {
 				cls = new TypeContext(type);
 				clss.put(split[0], cls);
 			}
+			addToOrderedClasses(type);
 			return cls;
 		} else {
 			TypeContext s = clss.get(split[0]);
@@ -51,17 +50,38 @@ public class PkgContext {
 		}
 	}
 
-	private PkgContext getPkg(String name) {
-		PkgContext p = pkgs.get(name);
-		if (p == null) {
-			p = new PkgContext(this, name);
-			pkgs.put(name, p);
+	private void addToOrderedClasses(TypeDeclaration type) {
+		String className = type.getClassName();
+		ObjectType superType = type.getSuperType();
+		if (superType != null) {
+			if (orderedClasses.contains(superType.getClassName())) {
+				if (orderedClasses.contains(className)) {
+					int ci = orderedClasses.indexOf(className);
+					int si = orderedClasses.indexOf(superType.getClassName());
+					if (si > ci) {
+						orderedClasses.remove(superType.getClassName());
+						orderedClasses.add(ci, superType.getClassName());
+					}
+				} else {
+					orderedClasses.add(className);
+				}
+			} else {
+				if (orderedClasses.contains(className)) {
+					orderedClasses.add(orderedClasses.indexOf(className), superType.getClassName());
+				} else {
+					orderedClasses.add(superType.getClassName());
+					orderedClasses.add(className);
+				}
+			}
+		} else {
+			if (!orderedClasses.contains(className)) {
+				orderedClasses.add(className);
+			}
 		}
-		return p;
 	}
 
 	public void write(File base) {
-		clss.forEach((s, st) -> {
+		foreachOrdeby((s, st) -> {
 			File file = new File(base, s + "." + J2JSSettings.ext);
 			try {
 				PrintStream single = new PrintStream(new FileOutputStream(file));
@@ -73,25 +93,32 @@ public class PkgContext {
 				e.printStackTrace();
 			}
 		});
-		pkgs.forEach((a, b) -> b.write(base));
 	}
 
 	public void write(PrintStream ps) {
-		clss.forEach((s, st) -> {
+		Set<String> totalImports = clss.values().stream().map(c -> c.getImports()).flatMap(is -> is.stream())
+				.map(i -> i.getClassName()).distinct().filter(i -> !orderedClasses.contains(i))
+				.collect(Collectors.toSet());
+		ExtRegistry.get().invoke("imports", ps, totalImports);
+
+		foreachOrdeby((s, st) -> {
 			try {
+				ps.println();
 				st.write(ps);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		});
-		pkgs.forEach((a, b) -> b.write(ps));
 	}
 
-	@Override
-	public String toString() {
-		if (parent != null) {
-			return parent + "." + name;
-		}
-		return "";
+	private void foreachOrdeby(BiConsumer<String, TypeContext> action) {
+		orderedClasses.forEach(c -> {
+			TypeContext t = clss.get(c);
+			if (t != null) {
+				action.accept(c, t);
+			}
+
+		});
+
 	}
 }

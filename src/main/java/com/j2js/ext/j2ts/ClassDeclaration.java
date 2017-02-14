@@ -3,6 +3,7 @@ package com.j2js.ext.j2ts;
 import java.io.PrintStream;
 import java.util.stream.Collectors;
 
+import com.j2js.J2JSSettings;
 import com.j2js.ext.ExtChain;
 import com.j2js.ext.ExtInvocation;
 import com.j2js.ext.ExtRegistry;
@@ -13,8 +14,10 @@ public class ClassDeclaration implements ExtInvocation<TypeContext> {
 	@Override
 	public void invoke(PrintStream ps, TypeContext input, ExtChain ch) {
 
-		ExtRegistry.get().invoke("imports", ps,
-				input.getImports().stream().map(i -> i.getClassName()).collect(Collectors.toSet()));
+		if (!J2JSSettings.singleFile) {
+			ExtRegistry.get().invoke("imports", ps,
+					input.getImports().stream().map(i -> i.getClassName()).collect(Collectors.toSet()));
+		}
 
 		ExtRegistry.get().invoke("class.name", ps, input.getType());
 

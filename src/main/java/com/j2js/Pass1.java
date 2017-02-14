@@ -1169,6 +1169,7 @@ public class Pass1 {
 
 			FieldAccess fa = new FieldWrite();
 			fa.setName(getFieldName(fieldRef));
+			fa.setTypeBinding(getFieldType(fieldRef));
 			fa.setType(new ObjectType(fieldRef.getClass(constantPool)));
 			fa.initialize(methodDecl);
 
@@ -1178,7 +1179,7 @@ public class Pass1 {
 
 			a.setLeftHandSide(fa);
 			a.setRightHandSide(rhs);
-
+			Optimizer.changeBooleanExpression(a);
 			instruction = a;
 			break;
 		}
@@ -1193,6 +1194,7 @@ public class Pass1 {
 			FieldAccess fa = new FieldRead();
 			fa.setType(new ObjectType(fieldRef.getClass(constantPool)));
 			fa.setName(getFieldName(fieldRef));
+			fa.setTypeBinding(getFieldType(fieldRef));
 			fa.setExpression(ex);
 			fa.initialize(methodDecl);
 			instruction = fa;
@@ -1209,6 +1211,7 @@ public class Pass1 {
 			fa.setType(new ObjectType(fieldRef.getClass(constantPool)));
 			fa.setName(getFieldName(fieldRef));
 			fa.initialize(methodDecl);
+			fa.setTypeBinding(getFieldType(fieldRef));
 			// Name e = new Name(fieldRef.getClass(constantPool));
 			// fa.setExpression(e);
 			instruction = fa;
@@ -2331,35 +2334,27 @@ public class Pass1 {
 		ConstantNameAndType nameAndType = (ConstantNameAndType) constantPool
 				.getConstant(methodRef.getNameAndTypeIndex(), Constants.CONSTANT_NameAndType);
 		String signature = nameAndType.getSignature(constantPool);
-		Type[] argumentTypes = Type.getArgumentTypes(signature);
-		if (argumentTypes.length == 0 && referenceKind == 5) {
-			referenceKind = 8;
-		}
+		int lambdaArgs = Project.getSingleton().getLambdaArguments(signature);
+		int bindingArgs = methodBinding.getParameterTypes().length;
+		int fromStackArgs = bindingArgs - lambdaArgs;
 
-		if (referenceKind == 5 || referenceKind == 7) {
-			Expression arg = (Expression) stack.pop();
-			inv.setExpression(arg);
-		}
-
-		int arguments = argumentTypes.length - methodBinding.getParameterTypes().length;
-		if (arguments > 0) {
-			int kk = stack.size() - arguments;
-			for (int i = 0; i < arguments; i++) {
+		if (fromStackArgs > 0) {
+			int kk = stack.size() - fromStackArgs;
+			for (int i = 0; i < fromStackArgs; i++) {
 				Expression arg = (Expression) stack.get(kk);
 				stack.remove(kk);
 				inv.addArgument(arg);
 			}
 		}
 
-		int lambdaArgs = 0;
-		if (referenceKind == 5) {
-			lambdaArgs = argumentTypes.length;
-		} else if (referenceKind == 6) {
-			lambdaArgs = methodBinding.getParameterTypes().length - argumentTypes.length;
-		} else if (referenceKind == 7) {
-			lambdaArgs = methodBinding.getParameterTypes().length;
-		} else if (referenceKind == 8) {
-			lambdaArgs = methodBinding.getParameterTypes().length + 1;
+		if (referenceKind == 7) {
+			Expression arg = (Expression) stack.pop();
+			inv.setExpression(arg);
+		}
+		
+		if (referenceKind == 5 && fromStackArgs != -1) {
+			Expression arg = (Expression) stack.pop();
+			inv.setExpression(arg);
 		}
 
 		List<VariableDeclaration> vars = new ArrayList<>();
@@ -2368,7 +2363,7 @@ public class Pass1 {
 			declaration.setName("_p" + i);
 			vars.add(declaration);
 		}
-		if (referenceKind == 8) {
+		if (fromStackArgs == -1) {
 			VariableDeclaration remove = vars.remove(0);
 			inv.setExpression(new VariableBinding(remove));
 			vars.forEach(v -> inv.addArgument(new VariableBinding(v)));
@@ -2487,6 +2482,34 @@ public class Pass1 {
 		ConstantNameAndType nameAndType = (ConstantNameAndType) constantPool
 				.getConstant(fieldRef.getNameAndTypeIndex());
 		return nameAndType.getName(constantPool);
+	}
+
+	private Type getFieldType(ConstantFieldref fieldRef) {
+		ConstantNameAndType nameAndType = (ConstantNameAndType) constantPool
+				.getConstant(fieldRef.getNameAndTypeIndex());
+		String signature = nameAndType.getSignature(constantPool);
+		switch (signature) {
+		case "Z":
+			return Type.BOOLEAN;
+		case "C":
+			return Type.CHAR;
+		case "F":
+			return Type.FLOAT;
+		case "D":
+			return Type.DOUBLE;
+		case "B":
+			return Type.BYTE;
+		case "S":
+			return Type.SHORT;
+		case "I":
+			return Type.INT;
+		case "J":
+			return Type.LONG;
+		case "V":
+			return Type.VOID;
+		default:
+			return new ObjectType(signature.replace('/', '.'));
+		}
 	}
 
 	public static String constantToString(Constant c, ConstantPool constantPool) throws ClassFormatException {

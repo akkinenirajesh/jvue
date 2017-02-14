@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,7 +32,6 @@ import com.j2js.dom.MethodDeclaration;
 import com.j2js.dom.MethodInvocation;
 import com.j2js.dom.TypeDeclaration;
 import com.j2js.visitors.AbstractVisitor;
-import com.j2js.visitors.Generator;
 
 public class Project implements Serializable {
 
@@ -60,6 +61,8 @@ public class Project implements Serializable {
 	public transient FileManager fileManager;
 
 	public transient AbstractVisitor generator;
+
+	public Map<String, Integer> lambdaArgs = new HashMap<>();
 
 	private Project() {
 	}
@@ -353,6 +356,29 @@ public class Project implements Serializable {
 			TypeResolver resolver = new TypeResolver(this, generator);
 			visitSuperTypes(clazz, resolver);
 		}
+	}
+
+	public int getLambdaArguments(String signature) {
+		String cls = signature.split("\\)L")[1];
+		Integer integer = lambdaArgs.get(cls);
+		if (integer != null) {
+			return integer;
+		}
+		cls = cls.substring(0, cls.length() - 1).replace('/', '.');
+		try {
+			Class<?> c = fileManager.getClassLoader().loadClass(cls);
+			Method[] methods = c.getMethods();
+			for (Method m : methods) {
+				if (!m.isDefault() && !Modifier.isStatic(m.getModifiers())) {
+					int count = m.getParameters().length;
+					lambdaArgs.put(cls, count);
+					return count;
+				}
+			}
+		} catch (ClassNotFoundException e) {
+			throw new RuntimeException(e);
+		}
+		throw new RuntimeException("Lambda method not found");
 	}
 
 }

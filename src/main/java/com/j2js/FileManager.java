@@ -90,4 +90,7 @@ public class FileManager {
 		throw new RuntimeException("Could not find " + relativeName + " on class path");
 	}
 
+	public ClassLoader getClassLoader() {
+		return classLoader;
+	}
 }
