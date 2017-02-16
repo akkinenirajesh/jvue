@@ -8,7 +8,7 @@ import com.j2js.ext.ExtRegistry;
 import com.j2js.ext.Tuple;
 import com.j2js.ts.MethodContext;
 
-public class MethodDeclaration implements ExtInvocation<Tuple<String, MethodContext>> {
+public class Method implements ExtInvocation<Tuple<String, MethodContext>> {
 
 	@Override
 	public void invoke(PrintStream ps, Tuple<String, MethodContext> input, ExtChain ch) {

@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.apache.bcel.generic.Type;
 
+import com.j2js.assembly.Project;
 import com.j2js.dom.VariableDeclaration;
 import com.j2js.ext.ExtChain;
 import com.j2js.ext.ExtInvocation;
@@ -209,6 +210,9 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 	}
 
 	private void generateMethod(PrintStream ps, String name, MethodContext m) {
+		if (m.getMethod() != null && !m.getMethod().isInstanceConstructor()) {
+			name = Project.getSingleton().getMethodReplcerName(m.getMethod().getMethodBinding());
+		}
 		Tuple<String, MethodContext> input = new Tuple<String, MethodContext>(name, m);
 		ExtRegistry.get().invoke("method", ps, input);
 	}

@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -14,9 +15,11 @@ import org.apache.bcel.generic.ObjectType;
 import com.j2js.J2JSSettings;
 import com.j2js.assembly.Project;
 import com.j2js.dom.ASTNode;
+import com.j2js.dom.ArrayCreation;
 import com.j2js.dom.Block;
 import com.j2js.dom.CastExpression;
 import com.j2js.dom.ClassInstanceCreation;
+import com.j2js.dom.Expression;
 import com.j2js.dom.FieldAccess;
 import com.j2js.dom.FieldRead;
 import com.j2js.dom.InstanceofExpression;
@@ -26,6 +29,8 @@ import com.j2js.dom.MethodDeclaration;
 import com.j2js.dom.MethodInvocation;
 import com.j2js.dom.PrimitiveCast;
 import com.j2js.dom.ReturnStatement;
+import com.j2js.dom.SwitchCase;
+import com.j2js.dom.SwitchStatement;
 import com.j2js.dom.ThisExpression;
 import com.j2js.dom.ThrowStatement;
 import com.j2js.dom.TypeDeclaration;
@@ -45,6 +50,10 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 		super(Project.getSingleton());
 		this.compiler = compiler;
 		this.project = new PkgContext();
+	}
+
+	public TypeContext getContext() {
+		return context;
 	}
 
 	public void writeToFile() {
@@ -71,29 +80,24 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	public void visit(TypeDeclaration type) {
 		setStream(type);
 		typeDecl = type;
-
-		depth++;
-
-		if (type.hasSuperClass()) {
-			context.addImports(type.getSuperType());
+		if (type.getType().getClassName().endsWith("ReceivePaymentItem")) {
+			System.out.println();
 		}
+		depth++;
+		try {
+			if (type.hasSuperClass()) {
+				context.addImports(type.getSuperType());
+			}
 
-		setOutputStream(context.getFieldsStream());
+			ExtRegistry.get().invoke("fields.visit", context.getFieldsStream(),
+					new VisitorInput<>(new ArrayList<>(type.getFields()), this));
 
-		List<VariableDeclaration> fields = type.getFields();
-		ExtRegistry.get().reduce("fields", fields, decl -> {
-			indent();
-			decl.visit(this);
-			println(";");
-		});
+			ExtRegistry.get().invoke("methods.visit", getOutputStream(),
+					new VisitorInput<>(Arrays.asList(type.getMethods()), this));
 
-		setOutputStream(null);
-
-		MethodDeclaration[] methods = type.getMethods();
-		ExtRegistry.get().reduce("methods", methods, m -> {
-			m.visit(this);
-		});
-
+		} catch (Throwable e) {
+			e.printStackTrace();
+		}
 		depth--;
 	}
 
@@ -121,6 +125,10 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 			String name = methodBinding.getName();
 			if (isFieldAccessor(name)) {
 				addFieldAccessor(method);
+			}
+
+			if (name.equals("getCurrencyFactor")) {
+				System.out.println();
 			}
 		}
 
@@ -163,21 +171,27 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	}
 
 	public void visit(MethodInvocation invocation) {
+		ExtRegistry.get().invoke("methodinvocation.visit", getOutputStream(), new VisitorInput<>(invocation, this));
+	}
+
+	public void methodInvocation(MethodInvocation invocation) {
 		ASTNode expression = invocation.getExpression();
 		MethodBinding methodBinding = invocation.getMethodBinding();
 		if (invocation.isSpecial) {
-			if (isAnonymousClass(invocation.getMethodDecl().toString())) {
-				ExtRegistry.get().invoke("super", getOutputStream(), null);
-			} else if (!typeDecl.hasSuperClass() && methodBinding.isConstructor()) {
+			if (!typeDecl.hasSuperClass() && methodBinding.isConstructor()) {
 				return;
-			} else {
-				if (methodBinding.isConstructor()) {
-					ExtRegistry.get().invoke("super", getOutputStream(), null);
-					print(".constructor0");
-				} else {
-					ExtRegistry.get().invoke("super", getOutputStream(), null);
-				}
 			}
+
+			if (expression != null) {
+				expression.visit(this);
+			} else {
+				ExtRegistry.get().invoke("super", getOutputStream(), null);
+			}
+
+			if (methodBinding.isConstructor() && !isAnonymousClass(invocation.getMethodDecl().toString())) {
+				print(".constructor0");
+			}
+
 		} else if (expression != null) {
 			expression.visit(this);
 			print(".");
@@ -197,6 +211,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 			if (invocation.isSpecial) {
 				print(".");
 			}
+			name = Project.getSingleton().getMethodReplcerName(methodBinding);
 			print(name);
 		}
 		print("(");
@@ -231,6 +246,9 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	}
 
 	public void visit(VariableDeclaration decl) {
+		if (decl.getType() instanceof ObjectType) {
+			context.addImports((ObjectType) decl.getType());
+		}
 		if (decl.getLocation() == VariableDeclaration.LOCAL_PARAMETER) {
 			print(decl.getName());
 			return;
@@ -274,25 +292,29 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	public void visit_(Block block) {
 		depth++;
 		ASTNode prev = this.next;
-		next = null;
-		boolean isAnonymouseConstructor = false;
-		ASTNode parent = block.getParentNode();
-		if (parent instanceof MethodDeclaration) {
-			MethodBinding binding = ((MethodDeclaration) parent).getMethodBinding();
-			if (binding.isConstructor() && binding.getDeclaringClass().getClassName().contains("$")) {
-				isAnonymouseConstructor = true;
+		try {
+			next = null;
+			boolean isAnonymouseConstructor = false;
+			ASTNode parent = block.getParentNode();
+			if (parent instanceof MethodDeclaration) {
+				MethodBinding binding = ((MethodDeclaration) parent).getMethodBinding();
+				if (binding.isConstructor() && binding.getDeclaringClass().getClassName().contains("$")) {
+					isAnonymouseConstructor = true;
+				}
 			}
-		}
 
-		ASTNode node = block.getFirstChild();
-		if (isAnonymouseConstructor) {
-			ASTNode next = node.getNextSibling();
-			generate(next);
-			generate(node);
-			node = next.getNextSibling();
-		}
-		while (node != null) {
-			node = generate(node);
+			ASTNode node = block.getFirstChild();
+			if (isAnonymouseConstructor) {
+				ASTNode next = node.getNextSibling();
+				generate(next);
+				generate(node);
+				node = next.getNextSibling();
+			}
+			while (node != null) {
+				node = generate(node);
+			}
+		} catch (Throwable e) {
+			e.printStackTrace();
 		}
 		depth--;
 		this.next = prev;
@@ -316,6 +338,10 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	public void visit(FieldAccess fr) {
 		ASTNode expression = fr.getExpression();
 		if (expression == null) {
+			if (Project.getSingleton().isEnum(fr.getType())) {
+				print("'").print(fr.getName()).print("'");
+				return;
+			}
 			context.addImports(fr.getType());
 			print(TSHelper.getSimpleName(fr.getType().getClassName()));
 		} else if (expression instanceof ThisExpression) {
@@ -364,5 +390,45 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 
 	public void visit(PrimitiveCast node) {
 		node.getExpression().visit(this);
+	}
+
+	public void visit(ArrayCreation ac) {
+		if (ac.getDimensions().size() <= 0) {
+			throw new RuntimeException("Expected array dimension > 0, but was" + ac.getDimensions().size());
+		}
+
+		if (ac.getInitializer() != null) {
+			ac.getInitializer().visit(this);
+		} else {
+			for (int i = 0; i < ac.getDimensions().size(); i++) {
+				print("[]");
+			}
+		}
+	}
+
+	public void visit(SwitchStatement switchStmt) {
+		Expression expression = switchStmt.getExpression();
+		
+		print("switch (");
+		expression.visit(this);
+		println(") {");
+		ASTNode node = switchStmt.getFirstChild();
+		boolean hasDefault = false;
+		while (node != null) {
+			SwitchCase sc = (SwitchCase) node;
+			sc.visit(this);
+			if (sc.getExpressions().isEmpty()) {
+				hasDefault = true;
+			}
+			node = node.getNextSibling();
+		}
+		if (!hasDefault) {
+			ASTNode parent = switchStmt.getParentNode();
+			if (parent instanceof Block && ((Block) parent).isLabeled()) {
+				Block b = (Block) parent;
+				indentln("default: break " + b.getLabel() + ";");
+			}
+		}
+		indentln("}");
 	}
 }

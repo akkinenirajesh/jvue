@@ -815,7 +815,7 @@ public class Pass1 {
 	private ASTNode parseInstruction() throws IOException {
 		int currentIndex = bytes.getIndex();
 		short opcode = (short) bytes.readUnsignedByte();
-		System.out.println("Opcode: " + opcode + "-> " + Integer.toHexString(opcode));
+//		System.out.println("Opcode: " + opcode + "-> " + Integer.toHexString(opcode));
 		InstructionType instructionType = Const.instructionTypes[opcode];
 
 		Form form = selectForm(instructionType);

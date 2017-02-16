@@ -12,7 +12,9 @@ import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 
 import org.apache.bcel.generic.ArrayType;
@@ -63,8 +65,15 @@ public class Project implements Serializable {
 	public transient AbstractVisitor generator;
 
 	public Map<String, Integer> lambdaArgs = new HashMap<>();
+	public Map<String, Boolean> enums = new HashMap<>();
+	private Map<String, Map<String, String>> methodReplacers = new HashMap<>();
+
+	private Set<String> objectMethods = new HashSet<>();
 
 	private Project() {
+		objectMethods.add("hashCode");
+		objectMethods.add("equals");
+		objectMethods.add("toString");
 	}
 
 	public static Project getSingleton() {
@@ -370,15 +379,60 @@ public class Project implements Serializable {
 			Method[] methods = c.getMethods();
 			for (Method m : methods) {
 				if (!m.isDefault() && !Modifier.isStatic(m.getModifiers())) {
-					int count = m.getParameters().length;
-					lambdaArgs.put(cls, count);
-					return count;
+					if (!objectMethods.contains(m.getName())) {
+						int count = m.getParameters().length;
+						lambdaArgs.put(cls, count);
+						return count;
+					}
 				}
 			}
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		}
 		throw new RuntimeException("Lambda method not found");
+	}
+
+	public boolean isEnum(ObjectType type) {
+		Boolean val = enums.get(type.getClassName());
+		if (val != null) {
+			return val;
+		}
+		try {
+			Class<?> cls = fileManager.getClassLoader().loadClass(type.getClassName());
+			enums.put(type.getClassName(), cls.isEnum());
+			return cls.isEnum();
+		} catch (ClassNotFoundException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public String getMethodReplcerName(MethodBinding binding) {
+		String cls = binding.getDeclaringClass().getClassName();
+		Map<String, String> map = methodReplacers.get(cls);
+		if (map == null) {
+			map = new HashMap<>();
+			methodReplacers.put(cls, map);
+		}
+		if (map.containsKey(binding.getName())) {
+			return map.get(binding.getName());
+		}
+
+		try {
+			Class<?> c = fileManager.getClassLoader().loadClass(cls);
+			while (c != null) {
+				try {
+					c.getDeclaredField(binding.getName());
+					String nm = "_" + binding.getName();
+					map.put(binding.getName(), nm);
+					return nm;
+				} catch (Exception e) {
+					c = c.getSuperclass();
+				}
+			}
+		} catch (Exception e) {
+		}
+		map.put(binding.getName(), binding.getName());
+		return binding.getName();
 	}
 
 }

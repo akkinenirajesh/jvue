@@ -1,14 +1,8 @@
 package com.j2js.ext;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.stream.Stream;
 
 import com.j2js.ext.j2ts.J2TSExtRegistry;
 
@@ -17,7 +11,6 @@ public class ExtRegistry {
 	private static ExtRegistry INS;
 
 	private Map<String, ExtInvocationList> points = new HashMap<>();
-	private Map<String, List<Predicate<?>>> filters = new HashMap<>();
 
 	private ExtRegistry() {
 	}
@@ -28,15 +21,6 @@ public class ExtRegistry {
 			J2TSExtRegistry.register();
 		}
 		return INS;
-	}
-
-	public <I> void filter(String point, Predicate<?> predicate) {
-		List<Predicate<?>> list = filters.get(point);
-		if (list == null) {
-			list = new ArrayList<>();
-			filters.put(point, list);
-		}
-		list.add(predicate);
 	}
 
 	public <I> void add(String point, ExtInvocation<?> invoke) {
@@ -59,22 +43,6 @@ public class ExtRegistry {
 		}
 		ExtChain ch = new ExtChainImpl(list);
 		ch.next(ps, input);
-	}
-
-	public <I> void reduce(String point, I[] values, Consumer<I> action) {
-		reduce(point, Arrays.asList(values), action);
-	}
-
-	@SuppressWarnings("unchecked")
-	public <I> void reduce(String point, List<I> values, Consumer<I> action) {
-		List<Predicate<?>> list = filters.get(point);
-		if (list == null) {
-			list = new ArrayList<>();
-			filters.put(point, list);
-		}
-		Stream<I> stream = values.stream();
-		list.forEach(p -> stream.filter((Predicate<I>) p));
-		stream.forEach(action);
 	}
 
 	private class ExtChainImpl implements ExtChain {

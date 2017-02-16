@@ -35,7 +35,6 @@ public class J2TSCompiler {
 
 	public J2TSCompiler() {
 		this.classLoader = getClass().getClassLoader();
-		addClasspathElements("libs/j4ts.jar;libs/jsweet-core.jar");
 		this.basedir = new File(".");
 		Log.logger = new Log();
 	}
@@ -56,6 +55,9 @@ public class J2TSCompiler {
 	}
 
 	public void addClass(String cls) {
+		if(cls.equals("org.ecgine.replication.core.TxData")){
+			
+		}
 		if (!this.classes.contains(cls)) {
 			this.classes.add(cls);
 		}

@@ -13,8 +13,13 @@ public class MethodName implements ExtInvocation<Tuple<String, MethodContext>> {
 	@Override
 	public void invoke(PrintStream ps, Tuple<String, MethodContext> input, ExtChain ch) {
 		ps.print("\t");
-		if (input.getR().getMethod() != null && Modifier.isStatic(input.getR().getMethod().getAccess())) {
-			ps.print("static ");
+		if (input.getR().getMethod() != null) {
+			if (Modifier.isPrivate(input.getR().getMethod().getAccess())) {
+				ps.print("private ");
+			}
+			if (Modifier.isStatic(input.getR().getMethod().getAccess())) {
+				ps.print("static ");
+			}
 		}
 		ps.print(input.getT());
 		ch.next(ps, input);

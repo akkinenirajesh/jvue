@@ -541,8 +541,7 @@ public class JavaScriptGenerator extends Generator {
 		if (VariableBinding.isBoolean(a.getLeftHandSide())) {
 			if (NumberLiteral.isZero(rhs)) {
 				print("false");
-			}
-			if (NumberLiteral.isOne(rhs)) {
+			} else if (NumberLiteral.isOne(rhs)) {
 				print("true");
 			} else {
 				rhs.visit(this);

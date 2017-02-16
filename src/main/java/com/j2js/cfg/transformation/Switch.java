@@ -60,7 +60,6 @@ public class Switch extends Transformation {
     void rollOut_(Block block) {
         SwitchStatement switchStmt = new SwitchStatement();
         switchStmt.setExpression(header.switchExpression);
-        
         for (int i=0; i<caseGroups.size(); i++) {
             Node scNode = caseGroups.get(i);
             SwitchCase switchCase = new SwitchCase(scNode.getInitialPc());
