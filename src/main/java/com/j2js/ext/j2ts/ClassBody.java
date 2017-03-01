@@ -60,15 +60,16 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 					context.getParams().append("(");
 					generateParameters(context.getParams(), 0);
 					context.getParams().append("){");
-					generateMethod(ps, name + "0", context);
+					generateMethod(ps, name + input.getType().getUnQualifiedName() + "0", context);
 				}
 			} else {
 
 				generateOverloadMethod(ps, input, name, list);
 
 				int i = 1;
+				String simpleName = input.getType().getUnQualifiedName();
 				for (MethodContext m : list) {
-					generateMethod(ps, name + i, m);
+					generateMethod(ps, name + simpleName + i, m);
 					i++;
 				}
 			}
@@ -96,6 +97,7 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 			}
 			parameterReplacers.add(replacers);
 		}
+		String simpleName = input.getType().getUnQualifiedName();
 		String dummyMethodName;
 		if (name.equals("constructor")) {
 			List<MethodContext> dummyList = new ArrayList<>();
@@ -105,7 +107,7 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 			generateParameters(context.getParams(), totalParams);
 			context.getParams().append("){");
 			generateMethod(ps, name, context);
-			dummyMethodName = "constructor0";
+			dummyMethodName = "constructor" + simpleName + "0";
 		} else {
 			dummyMethodName = name;
 		}
@@ -127,7 +129,7 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 			String condition = generateConstructorCondition(parameters, replacers, totalParams);
 			body.println("if(" + condition + ") {");
 			body.print("\t\t\t");
-			body.print("this." + name + i);
+			body.print("this." + name + simpleName + i);
 			body.print("(");
 			int j = 0;
 			for (VariableDeclaration v : parameters) {

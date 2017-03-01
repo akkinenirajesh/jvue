@@ -37,6 +37,7 @@ import com.j2js.dom.TypeDeclaration;
 import com.j2js.dom.VariableBinding;
 import com.j2js.dom.VariableDeclaration;
 import com.j2js.ext.ExtRegistry;
+import com.j2js.ext.Tuple;
 import com.j2js.visitors.JavaScriptGenerator;
 
 public class TypeScriptGenerator extends JavaScriptGenerator {
@@ -80,9 +81,6 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	public void visit(TypeDeclaration type) {
 		setStream(type);
 		typeDecl = type;
-		if (type.getType().getClassName().endsWith("ReceivePaymentItem")) {
-			System.out.println();
-		}
 		depth++;
 		try {
 			if (type.hasSuperClass()) {
@@ -125,10 +123,6 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 			String name = methodBinding.getName();
 			if (isFieldAccessor(name)) {
 				addFieldAccessor(method);
-			}
-
-			if (name.equals("getCurrencyFactor")) {
-				System.out.println();
 			}
 		}
 
@@ -189,7 +183,8 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 			}
 
 			if (methodBinding.isConstructor() && !isAnonymousClass(invocation.getMethodDecl().toString())) {
-				print(".constructor0");
+				print(".constructor").print(TSHelper.getSimpleName(methodBinding.getDeclaringClass().getClassName()))
+						.print("0");
 			}
 
 		} else if (expression != null) {
@@ -255,7 +250,8 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 		}
 
 		if (decl.getLocation() == VariableDeclaration.NON_LOCAL) {
-			ExtRegistry.get().invoke("class.field.decl", getOutputStream(), decl);
+			ExtRegistry.get().invoke("class.field.decl", getOutputStream(),
+					new Tuple<VariableDeclaration, TypeContext>(decl, context));
 			return;
 		} else {
 			if (decl.getLocation() != VariableDeclaration.LOCAL)
@@ -408,7 +404,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 
 	public void visit(SwitchStatement switchStmt) {
 		Expression expression = switchStmt.getExpression();
-		
+
 		print("switch (");
 		expression.visit(this);
 		println(") {");

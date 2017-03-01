@@ -18,6 +18,14 @@ public class SwitchStatement extends Block {
 		super();
 	}
 
+	public void setEnumCls(Class<?> enumCls) {
+		this.enumCls = enumCls;
+	}
+
+	public Class<?> getEnumCls() {
+		return enumCls;
+	}
+
 	public void visit(AbstractVisitor visitor) {
 		visitor.visit(this);
 	}

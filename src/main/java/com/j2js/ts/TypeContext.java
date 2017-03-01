@@ -27,7 +27,7 @@ public class TypeContext {
 
 	private TSPrintStream fields;
 
-	private Set<ObjectType> imports = new HashSet<>();
+	private Set<String> imports = new HashSet<>();
 
 	private TypeDeclaration type;
 
@@ -80,17 +80,25 @@ public class TypeContext {
 		if (parent != null) {
 			parent.addImports(type);
 		} else {
+			String name = type.getClassName();
+			if (name.startsWith("[")) {
+				name = name.substring(1, name.length());
+			}
+			if (name.endsWith(";")) {
+				name = name.substring(1, name.length() - 1);
+			}
 			// Do not add anonymous imports as they wont refer from other
 			// classes
-			if (type.getClassName().contains("$")) {
+			if (name.contains("$")) {
 				return;
 			}
 
 			// Don't need to import same class
-			if (type.getClassName().equals(this.type.getClassName())) {
+			if (name.equals(this.type.getClassName())) {
 				return;
 			}
-			imports.add(type);
+
+			imports.add(name);
 		}
 	}
 
@@ -98,7 +106,7 @@ public class TypeContext {
 		return type;
 	}
 
-	public Set<ObjectType> getImports() {
+	public Set<String> getImports() {
 		return imports;
 	}
 

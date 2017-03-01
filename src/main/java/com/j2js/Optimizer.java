@@ -38,16 +38,16 @@ public class Optimizer {
 		return pe;
 	}
 
-	public static void changeBooleanExpression(Assignment a) {
-		Type typeBinding = a.getLeftHandSide().getTypeBinding();
+	public static Expression changeBooleanExpression(Expression left, Expression right) {
+		Type typeBinding = left.getTypeBinding();
 		if (typeBinding == Type.BOOLEAN) {
-			Expression right = a.getRightHandSide();
 			if (NumberLiteral.isZero(right)) {
-				a.setRightHandSide(BooleanLiteral.FALSE);
+				return new BooleanLiteral(false);
 			} else if (NumberLiteral.isOne(right)) {
-				a.setRightHandSide(BooleanLiteral.TRUE);
+				return new BooleanLiteral(true);
 			}
 		}
+		return right;
 	}
 
 	/**

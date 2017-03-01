@@ -328,6 +328,14 @@ public class JavaScriptGenerator extends Generator {
 	public void visit(TryStatement tryStmt) {
 		println("try {");
 		visit_(tryStmt.getTryBlock());
+		if (tryStmt.getParentNode() instanceof Block) {
+			if (tryStmt.getParentBlock().isLabeled()) {
+				// ASTNode child = tryStmt.getTryBlock().getLastChild();
+				depth++;
+				indent("break ").print(tryStmt.getParentBlock().getLabel()).println(";");
+				depth--;
+			}
+		}
 		indent("} ");
 		Block clauses = tryStmt.getCatchStatements();
 		CatchClause clause = (CatchClause) clauses.getFirstChild();
@@ -498,10 +506,10 @@ public class JavaScriptGenerator extends Generator {
 	}
 
 	public void visit(SwitchCase switchCase) {
-		Iterator<NumberLiteral> iter = switchCase.getExpressions().iterator();
+		Iterator<? extends Expression> iter = switchCase.getExpressions().iterator();
 		if (iter.hasNext()) {
 			while (iter.hasNext()) {
-				NumberLiteral expression = iter.next();
+				Expression expression = iter.next();
 				indent("case ");
 				expression.visit(this);
 				println(":");

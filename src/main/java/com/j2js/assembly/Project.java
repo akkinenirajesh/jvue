@@ -33,6 +33,7 @@ import com.j2js.dom.MethodBinding;
 import com.j2js.dom.MethodDeclaration;
 import com.j2js.dom.MethodInvocation;
 import com.j2js.dom.TypeDeclaration;
+import com.j2js.ts.TSHelper;
 import com.j2js.visitors.AbstractVisitor;
 
 public class Project implements Serializable {
@@ -416,23 +417,30 @@ public class Project implements Serializable {
 		if (map.containsKey(binding.getName())) {
 			return map.get(binding.getName());
 		}
-
+		String res = binding.getName();
 		try {
 			Class<?> c = fileManager.getClassLoader().loadClass(cls);
 			while (c != null) {
 				try {
 					c.getDeclaredField(binding.getName());
-					String nm = "_" + binding.getName();
-					map.put(binding.getName(), nm);
-					return nm;
+					res = "_" + binding.getName();
+					break;
 				} catch (Exception e) {
 					c = c.getSuperclass();
 				}
 			}
+
+			if (res.equals("<clinit>")) {
+				res = "staticBlock";
+			}
+			if (res.startsWith("lambda$")) {
+				res = TSHelper.getSimpleName(cls) + '$' + res;
+			}
 		} catch (Exception e) {
 		}
-		map.put(binding.getName(), binding.getName());
-		return binding.getName();
+
+		map.put(binding.getName(), res);
+		return res;
 	}
 
 }

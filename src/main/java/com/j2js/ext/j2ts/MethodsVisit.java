@@ -13,8 +13,9 @@ public class MethodsVisit implements ExtInvocation<VisitorInput<List<MethodDecla
 
 	@Override
 	public void invoke(PrintStream ps, VisitorInput<List<MethodDeclaration>> input, ExtChain ch) {
-		input.getInput().forEach(
+		input.getInput().stream().filter(m -> !m.getMethodBinding().getName().startsWith("$SWITCH_TABLE$")).forEach(
 				m -> ExtRegistry.get().invoke("method.visit", ps, new VisitorInput<>(m, input.getGenerator())));
+		ch.next(ps, input);
 	}
 
 }

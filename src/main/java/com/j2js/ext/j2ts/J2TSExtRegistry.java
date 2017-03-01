@@ -1,8 +1,7 @@
 package com.j2js.ext.j2ts;
 
 import java.io.PrintStream;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.lang.reflect.Modifier;
 
 import com.j2js.dom.MethodDeclaration;
 import com.j2js.dom.MethodInvocation;
@@ -24,7 +23,7 @@ public class J2TSExtRegistry {
 		r.add("import.lib", new LibImport());
 
 		r.add("methods.visit", new MethodsVisit());
-		r.add("fields.visit", new FieldVisit());
+		r.add("fields.visit", new FieldsVisit());
 
 		r.add("method", new Method());
 		r.add("method.name", new MethodName());
@@ -44,13 +43,6 @@ public class J2TSExtRegistry {
 		r.add("this", new This());
 		r.add("super", new Super());
 
-		r.add("methods.visit", (PrintStream ps, VisitorInput<List<MethodDeclaration>> in, ExtChain ch) -> {
-			List<MethodDeclaration> filtered = in.getInput().stream()
-					.filter(m -> !m.getMethodBinding().getName().startsWith("_$SWITCH_TABLE$"))
-					.collect(Collectors.toList());
-			ch.next(ps, new VisitorInput<>(filtered, in.getGenerator()));
-		});
-
 		r.add("field.visit", new ExtInvocation<VisitorInput<VariableDeclaration>>() {
 
 			@Override
@@ -58,7 +50,12 @@ public class J2TSExtRegistry {
 				TypeScriptGenerator generator = input.getGenerator();
 				generator.setOutputStream(ps);
 				generator.indent();
-				input.getInput().visit(generator);
+				VariableDeclaration in = input.getInput();
+
+				if (Modifier.isStatic(in.getModifiers())) {
+					ps.print("static ");
+				}
+				in.visit(generator);
 				generator.println(";");
 				ch.next(ps, input);
 			}

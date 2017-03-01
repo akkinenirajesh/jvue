@@ -815,7 +815,8 @@ public class Pass1 {
 	private ASTNode parseInstruction() throws IOException {
 		int currentIndex = bytes.getIndex();
 		short opcode = (short) bytes.readUnsignedByte();
-//		System.out.println("Opcode: " + opcode + "-> " + Integer.toHexString(opcode));
+		// System.out.println("Opcode: " + opcode + "-> " +
+		// Integer.toHexString(opcode));
 		InstructionType instructionType = Const.instructionTypes[opcode];
 
 		Form form = selectForm(instructionType);
@@ -1178,8 +1179,7 @@ public class Pass1 {
 			}
 
 			a.setLeftHandSide(fa);
-			a.setRightHandSide(rhs);
-			Optimizer.changeBooleanExpression(a);
+			a.setRightHandSide(Optimizer.changeBooleanExpression(fa, rhs));
 			instruction = a;
 			break;
 		}
@@ -2351,7 +2351,7 @@ public class Pass1 {
 			Expression arg = (Expression) stack.pop();
 			inv.setExpression(arg);
 		}
-		
+
 		if (referenceKind == 5 && fromStackArgs != -1) {
 			Expression arg = (Expression) stack.pop();
 			inv.setExpression(arg);

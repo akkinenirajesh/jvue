@@ -7,11 +7,14 @@ import org.apache.bcel.Constants;
 import com.j2js.dom.VariableDeclaration;
 import com.j2js.ext.ExtChain;
 import com.j2js.ext.ExtInvocation;
+import com.j2js.ext.Tuple;
+import com.j2js.ts.TypeContext;
 
-public class ClassFieldDeclaration implements ExtInvocation<VariableDeclaration> {
+public class ClassFieldDeclaration implements ExtInvocation<Tuple<VariableDeclaration, TypeContext>> {
 
 	@Override
-	public void invoke(PrintStream ps, VariableDeclaration input, ExtChain ch) {
+	public void invoke(PrintStream ps, Tuple<VariableDeclaration, TypeContext> in, ExtChain ch) {
+		VariableDeclaration input = in.getT();
 		ps.print(input.getName());
 		if (!input.isInitialized())
 			return;
@@ -36,7 +39,7 @@ public class ClassFieldDeclaration implements ExtInvocation<VariableDeclaration>
 			break;
 		}
 
-		ch.next(ps, input);
+		ch.next(ps, in);
 
 	}
 

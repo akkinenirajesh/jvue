@@ -12,7 +12,7 @@ import com.j2js.visitors.AbstractVisitor;
  */
 public class SwitchCase extends Block {
 	
-	private List<NumberLiteral> expressions;
+	private List<? extends Expression> expressions;
 
 	public SwitchCase(int theBeginIndex) {
     	super(theBeginIndex);
@@ -25,13 +25,13 @@ public class SwitchCase extends Block {
 	/**
 	 * @return Returns the expression.
 	 */
-	public List<NumberLiteral> getExpressions() {
+	public List<? extends Expression> getExpressions() {
 		return expressions;
 	}
 	/**
 	 * @param expression The expression to set.
 	 */
-	public void setExpressions(List<NumberLiteral> theExpressions) {
+	public void setExpressions(List<? extends Expression> theExpressions) {
 		expressions = theExpressions;
 	}
 

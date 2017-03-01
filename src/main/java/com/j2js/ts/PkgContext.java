@@ -96,9 +96,8 @@ public class PkgContext {
 	}
 
 	public void write(PrintStream ps) {
-		Set<String> totalImports = clss.values().stream().map(c -> c.getImports()).flatMap(is -> is.stream())
-				.map(i -> i.getClassName()).distinct().filter(i -> !orderedClasses.contains(i))
-				.collect(Collectors.toSet());
+		Set<String> totalImports = clss.values().stream().map(c -> c.getImports()).flatMap(is -> is.stream()).distinct()
+				.filter(i -> !orderedClasses.contains(i)).collect(Collectors.toSet());
 		ExtRegistry.get().invoke("imports", ps, totalImports);
 
 		foreachOrdeby((s, st) -> {

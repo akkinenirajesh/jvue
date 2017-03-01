@@ -97,11 +97,17 @@ public class J2JSExtRegistry {
 			}
 		}, -1);
 
-		r.add("class.field.decl", new ExtInvocation<VariableDeclaration>() {
+		r.add("class.field.decl", new ExtInvocation<Tuple<VariableDeclaration, TypeContext>>() {
 
 			@Override
-			public void invoke(PrintStream ps, VariableDeclaration input, ExtChain ch) {
-				ps.print("\tthis.");
+			public void invoke(PrintStream ps, Tuple<VariableDeclaration, TypeContext> input, ExtChain ch) {
+				if (Modifier.isStatic(input.getT().getModifiers())) {
+					ps.print("\t");
+					ps.print(input.getR().getType().getUnQualifiedName());
+					ps.print(".");
+				} else {
+					ps.print("\tthis.");
+				}
 				ch.next(ps, input);
 			}
 		}, -1);
