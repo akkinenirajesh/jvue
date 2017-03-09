@@ -29,13 +29,13 @@ public class ClassDeclaration implements ExtInvocation<TypeContext> {
 
 		ps.print("}");
 
-		if (input.getMethods().containsKey("<clinit>")) {
+		ch.next(ps, input);
+
+		if (input.getStaticMethods().containsKey("<clinit>")) {
 			ps.println();
 			ps.print(input.getType().getUnQualifiedName());
-			ps.print(".staticBlock();");
+			ps.println(".staticBlock();");
 		}
-
-		ch.next(ps, input);
 	}
 
 }

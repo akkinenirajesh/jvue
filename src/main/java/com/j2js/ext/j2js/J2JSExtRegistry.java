@@ -1,8 +1,12 @@
 package com.j2js.ext.j2js;
 
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Modifier;
+import java.util.HashSet;
 import java.util.Set;
+
+import org.apache.commons.io.IOUtils;
 
 import com.j2js.dom.TypeDeclaration;
 import com.j2js.dom.VariableDeclaration;
@@ -14,25 +18,27 @@ import com.j2js.ts.MethodContext;
 import com.j2js.ts.TSHelper;
 import com.j2js.ts.TypeContext;
 import com.j2js.ts.TypeContext.TSPrintStream;
+import com.j2js.ts.TypeScriptGenerator;
+import com.j2js.ts.VisitorInput;
 
 public class J2JSExtRegistry {
 
 	public static void register() {
 		ExtRegistry r = ExtRegistry.get();
 
-		r.add("file.create", new ExtInvocation<Object>() {
-
-			@Override
-			public void invoke(PrintStream ps, Object input, ExtChain ch) {
-				ps.println("\"use strict\";");
-				ps.println("var __extends = (this && this.__extends) || function (d, b) {");
-				ps.println("\tfor (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];");
-				ps.println("\tfunction __() { this.constructor = d; }");
-				ps.println("\td.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());");
-				ps.println("};");
-				ps.println("var Lang_1 = require('./Lang');");// TODO
-			}
-		}, -1);
+//		r.add("file.create", new ExtInvocation<Object>() {
+//
+//			@Override
+//			public void invoke(PrintStream ps, Object input, ExtChain ch) {
+//				try {
+//					InputStream is = J2JSExtRegistry.class.getClassLoader().getResourceAsStream("javascript/j4ts.js");
+//					IOUtils.copy(is, ps);
+//					is.close();
+//				} catch (Exception e) {
+//					e.printStackTrace();
+//				}
+//			}
+//		}, -1);
 
 		r.add("imports", new ExtInvocation<Set<String>>() {
 
@@ -41,25 +47,33 @@ public class J2JSExtRegistry {
 			}
 		}, -1);
 
+		r.add("enum", new ExtInvocation<TypeContext>() {
+
+			@Override
+			public void invoke(PrintStream ps, TypeContext input, ExtChain ch) {
+				ps.println("());");
+				ch.next(ps, input);
+			}
+		}, 1);
+
 		r.add("class", new ExtInvocation<TypeContext>() {
 
 			@Override
 			public void invoke(PrintStream ps, TypeContext input, ExtChain ch) {
 				if (input.getType().hasSuperClass()) {
 					String className = input.getType().getSuperType().getClassName();
-					String simpleName = TSHelper.getSimpleName(className);
 					ps.print("(");
-					ps.print(simpleName);
+					ps.print(className);
 					ps.println("));");
 				} else {
 					ps.println("());");
 				}
-				ps.print("exports.");
-				String name = input.getType().getUnQualifiedName();
-				ps.print(name);
-				ps.print("= ");
-				ps.print(name);
-				ps.println(";");
+				// ps.print("exports.");
+				// String name = input.getType().getUnQualifiedName();
+				// ps.print(name);
+				// ps.print("= ");
+				// ps.print(name);
+				// ps.println(";");
 
 				ch.next(ps, input);
 			}
@@ -97,11 +111,25 @@ public class J2JSExtRegistry {
 			}
 		}, -1);
 
+		r.add("field.visit", new ExtInvocation<VisitorInput<VariableDeclaration>>() {
+
+			@Override
+			public void invoke(PrintStream ps, VisitorInput<VariableDeclaration> input, ExtChain ch) {
+				TypeScriptGenerator generator = input.getGenerator();
+				generator.setOutputStream(ps);
+				generator.indent();
+				VariableDeclaration in = input.getInput();
+				in.visit(generator);
+				generator.println(";");
+			}
+		}, -1);
+
 		r.add("class.field.decl", new ExtInvocation<Tuple<VariableDeclaration, TypeContext>>() {
 
 			@Override
 			public void invoke(PrintStream ps, Tuple<VariableDeclaration, TypeContext> input, ExtChain ch) {
-				if (Modifier.isStatic(input.getT().getModifiers())) {
+				VariableDeclaration var = input.getT();
+				if (Modifier.isStatic(var.getModifiers())) {
 					ps.print("\t");
 					ps.print(input.getR().getType().getUnQualifiedName());
 					ps.print(".");
@@ -133,7 +161,7 @@ public class J2JSExtRegistry {
 					// Account.prototype.constructor0 = function
 					ps.print(clsName);
 					ps.print(".");
-					if (input.getR().getMethod() == null || !Modifier.isStatic(input.getR().getMethod().getAccess())) {
+					if (!Modifier.isStatic(input.getR().getAccess())) {
 						ps.print("prototype.");
 					}
 					ps.print(input.getT());
@@ -142,11 +170,18 @@ public class J2JSExtRegistry {
 			}
 		}, -1);
 
+		r.add("method.return", new ExtInvocation<Tuple<String, MethodContext>>() {
+
+			@Override
+			public void invoke(PrintStream ps, Tuple<String, MethodContext> input, ExtChain ch) {
+			}
+		}, -1);
+
 		r.add("method.body.start", new ExtInvocation<Tuple<String, MethodContext>>() {
 
 			@Override
 			public void invoke(PrintStream ps, Tuple<String, MethodContext> input, ExtChain ch) {
-				ps.println("");
+				ps.println(" {");
 				ps.print("\t\tvar _this = this;");
 				ps.println("");
 				input.getR().getBody().write(ps);
@@ -160,7 +195,7 @@ public class J2JSExtRegistry {
 				if (input.getT().equals("constructor")) {
 					input.getR().getTypeContext().getFieldsStream().write(ps);
 				}
-				ch.next(ps, input);
+				ps.println("\t};");
 			}
 		}, -1);
 
@@ -193,5 +228,93 @@ public class J2JSExtRegistry {
 			}
 		}, -1);
 
+		r.add("pkg.start", new ExtInvocation<TypeContext>() {
+
+			@Override
+			public void invoke(PrintStream ps, TypeContext input, ExtChain ch) {
+				String pkgName = TSHelper.getPkgName(input.getType().getClassName());
+				String[] split = pkgName.split("\\.");
+				// var java; //It should be declared only once
+				// (function (java) {
+				// var security;
+				// (function (security) {
+				String s = split[0];
+				Set<String> pkgs = input.getCompiler().getAttr("pkg_decl");
+				if (pkgs == null) {
+					pkgs = new HashSet<>();
+					input.getCompiler().putAttr("pkg_decl", pkgs);
+				}
+				if (!pkgs.contains(s)) {
+					pkgs.add(s);
+					ps.print("var ");
+					ps.print(s);
+					ps.println(";");
+				}
+				ps.print("(function (");
+				ps.print(s);
+				ps.println(") {");
+				for (int i = 1; i < split.length; i++) {
+					// String intent = getIntent(i);
+					s = split[i];
+					// ps.print(intent);
+					ps.print("var ");
+					ps.print(s);
+					ps.println(";");
+					// ps.print(intent);
+					ps.print("(function (");
+					ps.print(s);
+					ps.println(") {");
+				}
+			}
+		}, -1);
+
+		r.add("pkg.end", new ExtInvocation<TypeContext>() {
+
+			@Override
+			public void invoke(PrintStream ps, TypeContext input, ExtChain ch) {
+				String[] split = input.getType().getClassName().split("\\.");
+
+				// security.Message = Message;
+				// Message["__class"] = "java.security.Message";
+				// String intent = getIntent(split.length - 2);
+				// ps.print(intent);
+				ps.print(split[split.length - 2]);
+				ps.print(".");
+				ps.print(split[split.length - 1]);
+				ps.print(" = ");
+				ps.print(split[split.length - 1]);
+				ps.println(";");
+
+				for (int i = split.length - 2; i >= 0; i--) {
+					// })(security = java.security || (java.security = {}));
+					// intent = getIntent(i);
+					String s = split[i];
+					// ps.print(intent);
+					ps.print("})(");
+					ps.print(s);
+					ps.print(" = ");
+					String remaining = split[0];
+					for (int j = 1; j <= i; j++) {
+						remaining += '.' + split[j];
+					}
+					ps.print(remaining);
+					ps.print(" || (");
+					ps.print(remaining);
+					ps.println(" = {}));");
+				}
+
+				// })(java || (java = {}));
+
+			}
+		}, -1);
+
+	}
+
+	protected static String getIntent(int i) {
+		StringBuilder b = new StringBuilder();
+		for (; i > 0; i--) {
+			b.append("\t");
+		}
+		return b.toString();
 	}
 }

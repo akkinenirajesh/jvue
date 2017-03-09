@@ -34,7 +34,6 @@ import com.j2js.dom.SwitchStatement;
 import com.j2js.dom.ThisExpression;
 import com.j2js.dom.ThrowStatement;
 import com.j2js.dom.TypeDeclaration;
-import com.j2js.dom.VariableBinding;
 import com.j2js.dom.VariableDeclaration;
 import com.j2js.ext.ExtRegistry;
 import com.j2js.ext.Tuple;
@@ -50,7 +49,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	public TypeScriptGenerator(J2TSCompiler compiler) {
 		super(Project.getSingleton());
 		this.compiler = compiler;
-		this.project = new PkgContext();
+		this.project = new PkgContext(compiler);
 	}
 
 	public TypeContext getContext() {
@@ -61,6 +60,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 		if (J2JSSettings.singleFile) {
 			File file = new File(compiler.getBasedir(), "out." + J2JSSettings.ext);
 			try {
+				file.createNewFile();
 				PrintStream ps = new PrintStream(new FileOutputStream(file));
 				ExtRegistry.get().invoke("file.create", ps, null);
 				project.write(ps);
@@ -74,90 +74,108 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 		}
 	}
 
-	private void setStream(TypeDeclaration type) {
+	public void setStream(TypeDeclaration type) {
 		this.context = project.get(type);
 	}
 
-	public void visit(TypeDeclaration type) {
+	public void visit(TypeDeclaration type, boolean isPartial) {
 		setStream(type);
 		typeDecl = type;
 		depth++;
+		PrintStream out = getOutputStream();
 		try {
 			if (type.hasSuperClass()) {
 				context.addImports(type.getSuperType());
 			}
 
-			ExtRegistry.get().invoke("fields.visit", context.getFieldsStream(),
-					new VisitorInput<>(new ArrayList<>(type.getFields()), this));
-
-			ExtRegistry.get().invoke("methods.visit", getOutputStream(),
-					new VisitorInput<>(Arrays.asList(type.getMethods()), this));
-
+			if (!context.isEnum()) {
+				setOutputStream(context.getFieldsStream());
+				ExtRegistry.get().invoke("fields.visit", context.getFieldsStream(),
+						new VisitorInput<>(new ArrayList<>(type.getFields()), this));
+			}
+			if (!isPartial) {
+				ExtRegistry.get().invoke("methods.visit", getOutputStream(),
+						new VisitorInput<>(Arrays.asList(type.getMethods()), this));
+			}
 		} catch (Throwable e) {
 			e.printStackTrace();
+		} finally {
+			setOutputStream(out);
+			depth--;
 		}
-		depth--;
 	}
 
 	public void visit(MethodDeclaration method) {
-		if (method.visited) {
-			return;
-		}
-		this.currentMethodDeclaration = method;
-		method.visited = true;
-		if (Modifier.isVolatile(method.getAccess())) {
-			return;
-		}
-
-		MethodBinding methodBinding = method.getMethodBinding();
-		// Do not generate abstract or native methods.
-		if (method.getBody() == null) {
-			if (Modifier.isNative(method.getAccess()) || Modifier.isAbstract(method.getAccess())
-					|| Modifier.isInterface(typeDecl.getAccess())) {
+		PrintStream out = getOutputStream();
+		try {
+			if (method.visited) {
 				return;
 			}
-			throw new RuntimeException(
-					"Method " + method + " with access " + method.getAccess() + " may not have empty body");
-		}
-		if (!methodBinding.isConstructor()) {
-			String name = methodBinding.getName();
-			if (isFieldAccessor(name)) {
-				addFieldAccessor(method);
+			this.currentMethodDeclaration = method;
+			method.visited = true;
+			if (Modifier.isVolatile(method.getAccess())) {
+				return;
 			}
+
+			MethodBinding methodBinding = method.getMethodBinding();
+			// Do not generate abstract or native methods.
+			if (method.getBody() == null) {
+				if (Modifier.isNative(method.getAccess()) || Modifier.isAbstract(method.getAccess())
+						|| Modifier.isInterface(typeDecl.getAccess())) {
+					return;
+				}
+				throw new RuntimeException(
+						"Method " + method + " with access " + method.getAccess() + " may not have empty body");
+			}
+			if (!methodBinding.isConstructor()) {
+				String name = methodBinding.getName();
+				if (isFieldAccessor(name)) {
+					addFieldAccessor(method);
+				}
+			}
+
+			MethodContext mc = context.getMethod(method);
+			setOutputStream(mc.getParams());
+			print("(");
+
+			Iterator<VariableDeclaration> iterator = method.getParameters().iterator();
+			while (iterator.hasNext()) {
+				VariableDeclaration decl = iterator.next();
+				decl.visit(this);
+				print(iterator.hasNext() ? ", " : "");
+			}
+
+			print(")");
+
+			setOutputStream(mc.getBody());
+			// Generate local variable declarations.
+			for (VariableDeclaration decl : method.getLocalVariables()) {
+				indent();
+				decl.visit(this);
+				println(";");
+			}
+
+			visit_(method.getBody());
+		} finally {
+			setOutputStream(out);
 		}
-
-		MethodContext mc = context.getMethod(method);
-		setOutputStream(mc.getParams());
-		print("(");
-
-		Iterator<VariableDeclaration> iterator = method.getParameters().iterator();
-		while (iterator.hasNext()) {
-			VariableDeclaration decl = iterator.next();
-			decl.visit(this);
-			print(iterator.hasNext() ? ", " : "");
-		}
-
-		print(") {");
-		setOutputStream(mc.getBody());
-		// Generate local variable declarations.
-		for (VariableDeclaration decl : method.getLocalVariables()) {
-			indent();
-			decl.visit(this);
-			println(";");
-		}
-
-		visit_(method.getBody());
-		setOutputStream(null);
 	}
 
 	private void addFieldAccessor(MethodDeclaration method) {
 		MethodBinding binding = method.getMethodBinding();
 		Block body = method.getBody();
 		ASTNode node = body.getFirstChild();
-		ReturnStatement ret = (ReturnStatement) node;
-		FieldRead field = (FieldRead) ret.getExpression();
-		String name = field.getName();
-		compiler.addFieldAccessor(binding.toString(), normalizeAccess(name));
+		if (node instanceof ReturnStatement) {
+			ReturnStatement ret = (ReturnStatement) node;
+			if (ret.getExpression() instanceof FieldRead) {
+				FieldRead field = (FieldRead) ret.getExpression();
+				String name = field.getName();
+				compiler.addFieldAccessor(binding.toString(), normalizeAccess(name));
+				return;
+			}
+		}
+		System.err.println("unknown access method");
+		compiler.addFieldAccessor(binding.toString(), "'unkwon access method'");
 	}
 
 	private boolean isFieldAccessor(String name) {
@@ -171,6 +189,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	public void methodInvocation(MethodInvocation invocation) {
 		ASTNode expression = invocation.getExpression();
 		MethodBinding methodBinding = invocation.getMethodBinding();
+		compiler.addClass(methodBinding.toString());
 		if (invocation.isSpecial) {
 			if (!typeDecl.hasSuperClass() && methodBinding.isConstructor()) {
 				return;
@@ -183,8 +202,8 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 			}
 
 			if (methodBinding.isConstructor() && !isAnonymousClass(invocation.getMethodDecl().toString())) {
-				print(".constructor").print(TSHelper.getSimpleName(methodBinding.getDeclaringClass().getClassName()))
-						.print("0");
+				String simpleName = methodBinding.getDeclaringClass().getClassName();
+				print(".constructor").print(simpleName).print("0");
 			}
 
 		} else if (expression != null) {
@@ -194,19 +213,35 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 		String name = methodBinding.getName();
 		if (isFieldAccessor(name)) {
 			String code = compiler.getFieldAccessor(methodBinding.toString());
-			((ASTNode) invocation.getArguments().get(0)).visit(this);
+			if (code == null) {
+				compiler.addClass(methodBinding.toString(), true);
+				code = compiler.getFieldAccessor(methodBinding.toString());
+				if (code == null) {
+					code = "'is null'";
+				}
+			}
+			List arguments = invocation.getArguments();
+			if (!arguments.isEmpty()) {
+				((ASTNode) arguments.get(0)).visit(this);
+			} else {
+				System.err.println("Unhandled method");
+			}
 			print(code);
 			return;
 		} else if (expression == null) {
 			context.addImports(methodBinding.getDeclaringClass());
+			if (Project.getSingleton().isEnum(methodBinding.getDeclaringClass())) {
+				compiler.addClass(methodBinding.getDeclaringClass().getClassName());
+			}
 			// Static invocation
-			print(getSimpleName(methodBinding.getDeclaringClass().getClassName())).print(".");
+			print(methodBinding.getDeclaringClass().getClassName()).print(".");
 		}
 		if (!methodBinding.isConstructor()) {
 			if (invocation.isSpecial) {
 				print(".");
 			}
-			name = Project.getSingleton().getMethodReplcerName(methodBinding);
+			name = Project.getSingleton().getMethodReplcerName(methodBinding.getDeclaringClass().getClassName(),
+					methodBinding.getName());
 			print(name);
 		}
 		print("(");
@@ -221,11 +256,13 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	public void visit(ClassInstanceCreation cic) {
 		context.addImports(cic.getCreationType());
 		String type = cic.getCreationType().getClassName();
-		print("new ").print(getSimpleName(type));
+		print("new ").print(type);
 		print("(");
 		List args = new ArrayList<>();
 		if (next instanceof MethodInvocation) {
-			args.addAll(((MethodInvocation) next).getArguments());
+			MethodInvocation inv = (MethodInvocation) next;
+			compiler.addClass(inv.getMethodBinding().toString());
+			args.addAll(inv.getArguments());
 			next = next.getNextSibling();
 		}
 		args.addAll(cic.getArguments());
@@ -302,9 +339,15 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 			ASTNode node = block.getFirstChild();
 			if (isAnonymouseConstructor) {
 				ASTNode next = node.getNextSibling();
-				generate(next);
+				if (next != null) {
+					generate(next);
+				}
 				generate(node);
-				node = next.getNextSibling();
+				if (next != null) {
+					node = next.getNextSibling();
+				} else {
+					node = null;
+				}
 			}
 			while (node != null) {
 				node = generate(node);
@@ -339,10 +382,8 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 				return;
 			}
 			context.addImports(fr.getType());
-			print(TSHelper.getSimpleName(fr.getType().getClassName()));
-		} else if (expression instanceof ThisExpression) {
-			expression.visit(this);
-		} else if (expression instanceof VariableBinding) {
+			print(fr.getType().getClassName());
+		} else {
 			expression.visit(this);
 		}
 
@@ -350,7 +391,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	}
 
 	public void visit(InvokeDynamic node) {
-		print("(");
+		print("function(");
 		if (!node.getPrams().isEmpty()) {
 			print(node.getPrams().get(0).getName());
 			for (int i = 1; i < node.getPrams().size(); i++) {
@@ -358,9 +399,9 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 				print(node.getPrams().get(i).getName());
 			}
 		}
-		print(") => {");
+		print(") { return ");
 		node.getInvocation().visit(this);
-		print("}");
+		print(";}");
 	}
 
 	public void visit(InstanceofExpression node) {
@@ -368,7 +409,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 		print(" instanceof ");
 		ObjectType rightOperand = (ObjectType) node.getRightOperand();
 		context.addImports(rightOperand);
-		print(TSHelper.getSimpleName(rightOperand.getClassName()));
+		print(rightOperand.getClassName());
 	}
 
 	public void visit(ThisExpression reference) {

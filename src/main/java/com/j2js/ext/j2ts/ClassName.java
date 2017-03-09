@@ -13,7 +13,7 @@ public class ClassName implements ExtInvocation<TypeDeclaration> {
 
 		String className = input.getUnQualifiedName();
 
-		ps.print("export class ");
+		ps.print("class ");
 
 		ps.print(className);
 

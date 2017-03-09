@@ -1,6 +1,7 @@
 package com.j2js.ext.j2ts;
 
 import java.io.PrintStream;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -10,6 +11,7 @@ import java.util.Map;
 import org.apache.bcel.generic.Type;
 
 import com.j2js.assembly.Project;
+import com.j2js.dom.MethodDeclaration;
 import com.j2js.dom.VariableDeclaration;
 import com.j2js.ext.ExtChain;
 import com.j2js.ext.ExtInvocation;
@@ -18,6 +20,7 @@ import com.j2js.ext.Tuple;
 import com.j2js.ts.MethodContext;
 import com.j2js.ts.TypeContext;
 import com.j2js.ts.TypeContext.TSPrintStream;
+import com.j2js.util.TypeUtils;
 
 public class ClassBody implements ExtInvocation<TypeContext> {
 
@@ -41,6 +44,10 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 			methods.put("<init>", remove);
 		}
 
+		input.getStaticMethods().forEach((name, list) -> {
+			generateMethod(ps, input, name, list);
+		});
+
 		ch.next(ps, input);
 	}
 
@@ -59,7 +66,7 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 					dummyList.add(context);
 					context.getParams().append("(");
 					generateParameters(context.getParams(), 0);
-					context.getParams().append("){");
+					context.getParams().append(")");
 					generateMethod(ps, name + input.getType().getUnQualifiedName() + "0", context);
 				}
 			} else {
@@ -105,7 +112,7 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 			dummyList.add(context);
 			context.getParams().append("(");
 			generateParameters(context.getParams(), totalParams);
-			context.getParams().append("){");
+			context.getParams().append(")");
 			generateMethod(ps, name, context);
 			dummyMethodName = "constructor" + simpleName + "0";
 		} else {
@@ -113,11 +120,14 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 		}
 
 		List<MethodContext> dummyList = new ArrayList<>();
-		MethodContext context = new MethodContext(input, null, dummyList);
+		MethodDeclaration method = list.get(0).getMethod();
+		MethodContext context = new MethodContext(input, method, dummyList);
 		dummyList.add(context);
 		context.getParams().append("(");
 		generateParameters(context.getParams(), totalParams);
-		context.getParams().append("){");
+		context.getParams().append(")");
+
+		boolean isStatic = Modifier.isStatic(context.getAccess());
 		int i = 0;
 		TSPrintStream body = context.getBody();
 		body.print("\t\t");
@@ -129,7 +139,12 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 			String condition = generateConstructorCondition(parameters, replacers, totalParams);
 			body.println("if(" + condition + ") {");
 			body.print("\t\t\t");
-			body.print("this." + name + simpleName + i);
+			if (isStatic) {
+				body.print(simpleName);
+			} else {
+				body.print("this");
+			}
+			body.print("." + name + simpleName + i);
 			body.print("(");
 			int j = 0;
 			for (VariableDeclaration v : parameters) {
@@ -181,6 +196,10 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 
 	private String generateConstCondition(VariableDeclaration p, String var) {
 		Type type = p.getType();
+		if (type.toString().endsWith("[]")) {
+			// t === null || t instanceof Array
+			return var + " === null || " + var + " instanceof Array";
+		}
 		switch (type.toString()) {
 		case "java.lang.String":
 		case "char":
@@ -198,6 +217,9 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 			// test === null || typeof test === 'boolean'
 			return var + " === null || " + "typeof " + var + " === 'boolean'";
 		default:
+			if (Project.getSingleton().isEnum(TypeUtils.extractClassName(type.toString()))) {
+				return var + " === null || " + "typeof " + var + " === 'string'";
+			}
 			// t === null || t instanceof org.ecgine.vue.acc.Transaction
 			return var + " === null || " + var + " instanceof " + getSimpleName(type.toString());
 		}
@@ -213,7 +235,8 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 
 	private void generateMethod(PrintStream ps, String name, MethodContext m) {
 		if (m.getMethod() != null && !m.getMethod().isInstanceConstructor()) {
-			name = Project.getSingleton().getMethodReplcerName(m.getMethod().getMethodBinding());
+			name = Project.getSingleton()
+					.getMethodReplcerName(m.getMethod().getMethodBinding().getDeclaringClass().getClassName(), name);
 		}
 		Tuple<String, MethodContext> input = new Tuple<String, MethodContext>(name, m);
 		ExtRegistry.get().invoke("method", ps, input);

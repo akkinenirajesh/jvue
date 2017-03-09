@@ -12,12 +12,13 @@ import org.apache.bcel.generic.Type;
 import com.j2js.FileManager;
 import com.j2js.J2JSSettings;
 import com.j2js.Log;
-import com.j2js.Parser;
 import com.j2js.Utils;
 import com.j2js.assembly.ClassUnit;
+import com.j2js.assembly.MemberUnit;
 import com.j2js.assembly.Project;
+import com.j2js.dom.MethodDeclaration;
 import com.j2js.dom.TypeDeclaration;
-import com.j2js.visitors.AbstractVisitor;
+import com.j2js.ext.ExtRegistry;
 
 public class J2TSCompiler {
 
@@ -30,6 +31,8 @@ public class J2TSCompiler {
 	private List<File> classpath = new ArrayList<>();
 
 	private Map<String, String> fieldAccessors = new HashMap<>();
+
+	private Map<String, Object> attr = new HashMap<>();
 
 	private File basedir;
 
@@ -54,13 +57,19 @@ public class J2TSCompiler {
 		this.classLoader = classLoader;
 	}
 
-	public void addClass(String cls) {
-		if(cls.equals("org.ecgine.replication.core.TxData")){
-			
-		}
+	public void addClass(String cls, boolean process) {
 		if (!this.classes.contains(cls)) {
 			this.classes.add(cls);
 		}
+		if (process) {
+			Project project = Project.getSingleton();
+			process(project, (TypeScriptGenerator) project.generator, cls);
+		}
+
+	}
+
+	public void addClass(String cls) {
+		this.addClass(cls, false);
 	}
 
 	public void execute() throws Exception {
@@ -72,13 +81,53 @@ public class J2TSCompiler {
 		project.fileManager = fileManager;
 		while (!classes.isEmpty()) {
 			String cls = classes.remove(0);
-			ClassUnit unit = project.getOrCreateClassUnit(cls);
-			resolve(unit, visitor);
+			process(project, visitor, cls);
 		}
 		visitor.writeToFile();
 	}
 
-	private void resolve(ClassUnit clazz, AbstractVisitor visitor) {
+	private void process(Project project, TypeScriptGenerator visitor, String cls) {
+		String[] split = cls.split("#");
+		boolean isPartial = false;
+		if (split.length > 1) {
+			isPartial = true;
+		}
+		String fqn = split[0];
+
+		if (!J2JSSettings.allowClass.test(fqn)) {
+			return;
+		}
+		ClassUnit unit = project.getOrCreateClassUnit(fqn);
+		unit.setPartial(isPartial);
+		resolve(unit, visitor);
+		if (isPartial) {
+			MemberUnit mu = unit.getDeclaredMember(split[1]);
+			if (mu != null) {
+				resolve(mu, visitor);
+			}
+		}
+
+	}
+
+	private void resolve(MemberUnit mu, TypeScriptGenerator visitor) {
+		if (mu.isResolved())
+			return;
+		mu.setResolved(true);
+		try {
+			if (mu.getDeclaringClass().typeDecl == null) {
+				System.err.println("Def not found: " + mu);
+				return;
+			}
+			visitor.setStream(mu.getDeclaringClass().typeDecl);
+			visitor.incDepth();
+			ExtRegistry.get().invoke("method.visit", null, new VisitorInput<MethodDeclaration>(
+					mu.getDeclaringClass().typeDecl.getMethodBySignature(mu.toString()), visitor));
+		} finally {
+			visitor.decDepth();
+		}
+	}
+
+	private void resolve(ClassUnit clazz, TypeScriptGenerator visitor) {
 		if (clazz.isResolved())
 			return;
 
@@ -96,7 +145,7 @@ public class J2TSCompiler {
 		}
 	}
 
-	public void visitSuperTypes(ClassUnit clazz, AbstractVisitor visitor) {
+	public void visitSuperTypes(ClassUnit clazz, TypeScriptGenerator visitor) {
 		if (clazz.isResolved())
 			return;
 
@@ -106,6 +155,9 @@ public class J2TSCompiler {
 			// Class is an array class without class file: Do nothing.
 		} else {
 			try {
+				if (!J2JSSettings.allowClass.test(clazz.toString())) {
+					return;
+				}
 				compile(clazz, visitor);
 			} catch (RuntimeException ex) {
 				J2JSSettings.errorCount++;
@@ -127,7 +179,7 @@ public class J2TSCompiler {
 		}
 	}
 
-	private void compile(ClassUnit classUnit, AbstractVisitor visitor) {
+	private void compile(ClassUnit classUnit, TypeScriptGenerator visitor) {
 
 		if (classUnit.getClassFile() == null) {
 			Log.getLogger().warn("Cannot read " + classUnit.getClassFile());
@@ -136,23 +188,15 @@ public class J2TSCompiler {
 
 		Log.getLogger().info("Cross-Compiling " + classUnit);
 
-		TypeDeclaration typeDecl = parse(classUnit);
+		if (!classUnit.isPartial()) {
+			classUnit.getDeclaredMembers().forEach(m -> m.setResolved(true));
+		}
 
-		typeDecl.visit(visitor);
+		ExtRegistry.get().invoke("type.visit", null, new VisitorInput<ClassUnit>(classUnit, visitor));
 
 		// Set not current date but date of last modification. This is
 		// independent of system clock.
 		classUnit.setLastCompiled(classUnit.getLastModified());
-	}
-
-	private TypeDeclaration parse(ClassUnit classUnit) {
-		if (classUnit.typeDecl != null) {
-			return classUnit.typeDecl;
-		}
-		Parser parser = new Parser(classUnit);
-		TypeDeclaration typeDecl = parser.parse();
-		classUnit.typeDecl = typeDecl;
-		return typeDecl;
 	}
 
 	/**
@@ -200,5 +244,14 @@ public class J2TSCompiler {
 
 	public String getFieldAccessor(String field) {
 		return this.fieldAccessors.get(field);
+	}
+
+	@SuppressWarnings("unchecked")
+	public <T> T getAttr(String key) {
+		return (T) attr.get(key);
+	}
+
+	public void putAttr(String key, Object val) {
+		attr.put(key, val);
 	}
 }

@@ -131,12 +131,13 @@ public class TypeDeclaration extends ASTNode {
 	}
 
 	public boolean hasSuperClass() {
-		return getSuperType() != null && !getSuperType().getClassName().equals("java.lang.Object");
+		return getSuperType() != null && !getSuperType().getClassName().equals("java.lang.Object")
+				&& !getSuperType().getClassName().equals("java.lang.Enum");
 	}
 
-	public MethodDeclaration getMethod(String name) {
+	public MethodDeclaration getMethodBySignature(String method) {
 		for (MethodDeclaration md : methods) {
-			if (md.getMethodBinding().getName().equals(name)) {
+			if (md.getMethodBinding().toString().equals(method)) {
 				return md;
 			}
 		}

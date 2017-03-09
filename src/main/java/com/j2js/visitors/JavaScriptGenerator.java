@@ -331,9 +331,12 @@ public class JavaScriptGenerator extends Generator {
 		if (tryStmt.getParentNode() instanceof Block) {
 			if (tryStmt.getParentBlock().isLabeled()) {
 				// ASTNode child = tryStmt.getTryBlock().getLastChild();
-				depth++;
-				indent("break ").print(tryStmt.getParentBlock().getLabel()).println(";");
-				depth--;
+				ASTNode lastChild = tryStmt.getTryBlock().getLastChild();
+				if (!(lastChild instanceof ReturnStatement)) {
+					depth++;
+					indent("break ").print(tryStmt.getParentBlock().getLabel()).println(";");
+					depth--;
+				}
 			}
 		}
 		indent("} ");
@@ -453,26 +456,9 @@ public class JavaScriptGenerator extends Generator {
 		Expression left = binOp.getLeftOperand();
 		Expression right = binOp.getRightOperand();
 
-		boolean isTruncate = false;
-		Type type = binOp.getTypeBinding();
-
-		/*
-		 * There is no integral type division in ECMAScript, so we need to
-		 * truncate the result. Note that the % operation works the same in
-		 * ECMAScript and Java, i.e. in accepting floating-points.
-		 */
-		if (op == InfixExpression.Operator.DIVIDE && (type.equals(Type.LONG) || type.equals(Type.INT))) {
-			isTruncate = true;
-			print(" " + prefix + "trunc(");
-		}
-
 		bracket(left, op);
 		print(" " + op + " ");
 		bracket(right, op);
-
-		if (isTruncate) {
-			print(")");
-		}
 	}
 
 	public void visit(ConditionalExpression ce) {

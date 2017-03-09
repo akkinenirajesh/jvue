@@ -75,6 +75,9 @@ public class Project implements Serializable {
 		objectMethods.add("hashCode");
 		objectMethods.add("equals");
 		objectMethods.add("toString");
+		enums.put("char", false);
+		enums.put("byte", false);
+		enums.put("int", false);
 	}
 
 	public static Project getSingleton() {
@@ -249,7 +252,7 @@ public class Project implements Serializable {
 			return classUnit;
 
 		Signature signature = Project.singleton.getSignature(className);
-		classUnit = new ClassUnit(this, fileManager, signature);
+		classUnit = new ClassUnit(this, fileManager, className, signature);
 		classesByName.put(className, classUnit);
 
 		if (className.equals("java.lang.Object")) {
@@ -394,36 +397,41 @@ public class Project implements Serializable {
 	}
 
 	public boolean isEnum(ObjectType type) {
-		Boolean val = enums.get(type.getClassName());
+		return isEnum(type.getClassName());
+	}
+
+	public boolean isEnum(String fullName) {
+		Boolean val = enums.get(fullName);
 		if (val != null) {
 			return val;
 		}
 		try {
-			Class<?> cls = fileManager.getClassLoader().loadClass(type.getClassName());
-			enums.put(type.getClassName(), cls.isEnum());
+			Class<?> cls = fileManager.getClassLoader().loadClass(fullName);
+			enums.put(fullName, cls.isEnum());
 			return cls.isEnum();
 		} catch (ClassNotFoundException e) {
-			throw new RuntimeException(e);
+			e.printStackTrace();
+			enums.put(fullName, false);
+			return false;
 		}
 	}
 
-	public String getMethodReplcerName(MethodBinding binding) {
-		String cls = binding.getDeclaringClass().getClassName();
+	public String getMethodReplcerName(String cls, String name) {
 		Map<String, String> map = methodReplacers.get(cls);
 		if (map == null) {
 			map = new HashMap<>();
 			methodReplacers.put(cls, map);
 		}
-		if (map.containsKey(binding.getName())) {
-			return map.get(binding.getName());
+		if (map.containsKey(name)) {
+			return map.get(name);
 		}
-		String res = binding.getName();
+		String res = name;
 		try {
 			Class<?> c = fileManager.getClassLoader().loadClass(cls);
 			while (c != null) {
 				try {
-					c.getDeclaredField(binding.getName());
-					res = "_" + binding.getName();
+					c.getDeclaredField(name);
+					res = "_" + name;
 					break;
 				} catch (Exception e) {
 					c = c.getSuperclass();
@@ -439,7 +447,7 @@ public class Project implements Serializable {
 		} catch (Exception e) {
 		}
 
-		map.put(binding.getName(), res);
+		map.put(name, res);
 		return res;
 	}
 

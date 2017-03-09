@@ -62,12 +62,14 @@ import com.j2js.dom.CastExpression;
 import com.j2js.dom.CatchClause;
 import com.j2js.dom.ClassInstanceCreation;
 import com.j2js.dom.ClassLiteral;
+import com.j2js.dom.CompareExpression;
 import com.j2js.dom.ConditionalBranch;
 import com.j2js.dom.Expression;
 import com.j2js.dom.FieldAccess;
 import com.j2js.dom.FieldRead;
 import com.j2js.dom.FieldWrite;
 import com.j2js.dom.InfixExpression;
+import com.j2js.dom.InfixExpression.Operator;
 import com.j2js.dom.InstanceofExpression;
 import com.j2js.dom.InvokeDynamic;
 import com.j2js.dom.Jump;
@@ -891,10 +893,13 @@ public class Pass1 {
 				SwitchEdge switchEdge = getOrCreateCaseGroup(switchNode, caseGroups, offset + bytes.readInt());
 				switchEdge.expressions.add(NumberLiteral.create(new Integer(key)));
 			}
-			// if(!caseGroups.containsKey(defaultOffset)){
-			Node defaultNode = graph.createNode(defaultOffset);
-			graph.addEdge(switchNode, defaultNode);
-			// }
+			if (!caseGroups.containsKey(defaultOffset)) {
+				try {
+					Node defaultNode = graph.createNode(defaultOffset);
+					graph.addEdge(switchNode, defaultNode);
+				} catch (Exception e) {
+				}
+			}
 			// getOrCreateCaseGroup(switchNode, caseGroups, defaultOffset);
 
 			instruction = new NoOperation();
@@ -1045,21 +1050,23 @@ public class Pass1 {
 		case Const.DCMPG: {
 			// Format: dcmpg
 			// Operand stack: ..., value1(), value2() -> ..., result(int)
-			MethodBinding binding = MethodBinding.lookup("javascript.Utils", "cmp", "(DDI)I");
-			MethodInvocation mi = new MethodInvocation(methodDecl, binding);
-
-			Expression value2 = stack.pop();
-			mi.addArgument(stack.pop());
-			mi.addArgument(value2);
-
-			int gORl = 0;
-			if (instructionType.getName().endsWith("g"))
-				gORl = 1;
-			else if (instructionType.getName().endsWith("l"))
-				gORl = -1;
-			mi.addArgument(NumberLiteral.create(gORl));
-
-			instruction = mi;
+			Expression b = stack.pop();
+			Expression a = stack.pop();
+			Expression ins;
+			if (instructionType.getName().endsWith("g")) {
+				InfixExpression l = new InfixExpression(Operator.GREATER);
+				l.setOperands(a, b);
+				ins = l;
+			} else if (instructionType.getName().endsWith("l")) {
+				InfixExpression l = new InfixExpression(Operator.LESS);
+				l.setOperands(a, b);
+				ins = l;
+			} else {
+				CompareExpression cmp = new CompareExpression();
+				cmp.setOperands(a, b);
+				ins = cmp;
+			}
+			instruction = ins;
 
 			break;
 		}

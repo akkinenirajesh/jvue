@@ -11,7 +11,7 @@ public class MethodStart implements ExtInvocation<Tuple<String, MethodContext>> 
 
 	@Override
 	public void invoke(PrintStream ps, Tuple<String, MethodContext> input, ExtChain ch) {
-		ps.println("");
+		ps.println(" {");
 		if (input.getR().getList().size() == 1) {
 			String name = input.getT();
 			if (name.equals("constructor") && input.getR().getType().hasSuperClass()

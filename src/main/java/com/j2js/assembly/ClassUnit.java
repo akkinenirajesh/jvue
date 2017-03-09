@@ -21,278 +21,280 @@ import com.j2js.dom.TypeDeclaration;
  */
 public class ClassUnit extends Unit {
 
-    static final long serialVersionUID = 1;
+	static final long serialVersionUID = 1;
 
-    // Time stamp at which unit was last compiled.
-    private long lastCompiled;
+	// Time stamp at which unit was last compiled.
+	private long lastCompiled;
 
-    /**
-     * Returns the time stamp at which the class file was last modified.
-     */
-    public long getLastModified() {
-        return getClassFile().getLastModified();
-    }
+	/**
+	 * Returns the time stamp at which the class file was last modified.
+	 */
+	public long getLastModified() {
+		return getClassFile().getLastModified();
+	}
 
-    // All members declared by this class, mapped by relative signature.
-    private Map<String, MemberUnit> declaredMembers;
+	// All members declared by this class, mapped by relative signature.
+	private Map<String, MemberUnit> declaredMembers;
 
-    // The super class.
-    private ClassUnit superUnit;
+	// The super class.
+	private ClassUnit superUnit;
 
-    // All interfaces implemented by this unit.
-    private Collection<ClassUnit> interfaces;
+	// All interfaces implemented by this unit.
+	private Collection<ClassUnit> interfaces;
 
-    // All derived classes.
-    private Collection<ClassUnit> subUnits;
+	// All derived classes.
+	private Collection<ClassUnit> subUnits;
 
-    public boolean isInterface = false;
+	public boolean isInterface = false;
 
-    public boolean isConstructorTainted = false;
+	public boolean isConstructorTainted = false;
 
-    private Project project;
+	private Project project;
 
-    // Transient fields start here.
-    private transient boolean isResolved = false;
+	// The class file of this unit.
+	private transient FileObject classFile;
 
-    // The class file of this unit.
-    private transient FileObject classFile;
+	private transient FileManager fileManager;
 
-    private transient FileManager fileManager;
-    
-    public transient TypeDeclaration typeDecl;
+	public transient TypeDeclaration typeDecl;
 
-    public ClassUnit() {
-    }
+	private String classFullName;
 
-    public ClassUnit(Project theProject, FileManager fileManager,
-            Signature theSignature) {
-        project = theProject;
-        this.fileManager = fileManager;
+	private boolean isPartial;
 
-        interfaces = new HashSet<ClassUnit>();
-        declaredMembers = new HashMap<String, MemberUnit>();
-        subUnits = new HashSet<ClassUnit>();
-        lastCompiled = -1;
-        setSignature(theSignature);
-    }
+	public ClassUnit() {
+	}
 
-    /**
-     * Reset all fields filled by compilation.
-     */
-    void clear() {
-        // Do not remove registered subunits!
-        lastCompiled = -1;
-        removeInterfaces();
-        setSuperUnit(null);
-        declaredMembers.clear();
-    }
+	public ClassUnit(Project theProject, FileManager fileManager, String classFullName, Signature theSignature) {
+		project = theProject;
+		this.fileManager = fileManager;
+		this.classFullName = classFullName;
 
-    /**
-     * Returns true if this unit is up to date.
-     */
-    public boolean isUpToDate() {
-        return lastCompiled >= getLastModified();
-    }
+		interfaces = new HashSet<ClassUnit>();
+		declaredMembers = new HashMap<String, MemberUnit>();
+		subUnits = new HashSet<ClassUnit>();
+		lastCompiled = -1;
+		setSignature(theSignature);
+	}
 
-    public Collection<ClassUnit> getInterfaces() {
-        return interfaces;
-    }
+	public String getClassFullName() {
+		return classFullName;
+	}
 
-    public void addInterface(ClassUnit interfaceUnit) {
-        interfaces.add(interfaceUnit);
-        // interfaceUnit.addSubUnit(this);
-    }
+	/**
+	 * Reset all fields filled by compilation.
+	 */
+	void clear() {
+		// Do not remove registered subunits!
+		lastCompiled = -1;
+		removeInterfaces();
+		setSuperUnit(null);
+		declaredMembers.clear();
+	}
 
-    private void removeInterfaces() {
-        Iterator iter = interfaces.iterator();
-        while (iter.hasNext()) {
-            ClassUnit interfaceUnit = (ClassUnit) iter.next();
-            interfaceUnit.removeSubUnit(this);
-            iter.remove();
-        }
-    }
+	/**
+	 * Returns true if this unit is up to date.
+	 */
+	public boolean isUpToDate() {
+		return lastCompiled >= getLastModified();
+	}
 
-    public void addSubUnit(ClassUnit subUnit) {
-        if (subUnit == null)
-            throw new NullPointerException();
-        subUnits.add(subUnit);
-    }
+	public Collection<ClassUnit> getInterfaces() {
+		return interfaces;
+	}
 
-    public void removeSubUnit(ClassUnit subUnit) {
-        if (subUnit == null)
-            throw new NullPointerException();
-        subUnits.remove(subUnit);
-    }
+	public void addInterface(ClassUnit interfaceUnit) {
+		interfaces.add(interfaceUnit);
+		// interfaceUnit.addSubUnit(this);
+	}
 
-    public Collection<ClassUnit> getSubUnits() {
-        return subUnits;
-    }
+	private void removeInterfaces() {
+		Iterator iter = interfaces.iterator();
+		while (iter.hasNext()) {
+			ClassUnit interfaceUnit = (ClassUnit) iter.next();
+			interfaceUnit.removeSubUnit(this);
+			iter.remove();
+		}
+	}
 
-    /**
-     * Returns the declared member with the specified signature.
-     */
-    public MemberUnit getDeclaredMember(String signature) {
-        if (signature == null)
-            throw new NullPointerException();
-        return declaredMembers.get(signature);
-    }
+	public void addSubUnit(ClassUnit subUnit) {
+		if (subUnit == null)
+			throw new NullPointerException();
+		subUnits.add(subUnit);
+	}
 
-    /**
-     * Returns all types to which this class can be converted, i.e., the
-     * collection of all supertypes and implemented interfaces and the class
-     * itself.
-     */
-    public Collection<ClassUnit> getSupertypes() {
-        TypeCollector collector = new TypeCollector();
-        project.visitSuperTypes(this, collector);
-        return collector.collectedTypes;
-    }
+	public void removeSubUnit(ClassUnit subUnit) {
+		if (subUnit == null)
+			throw new NullPointerException();
+		subUnits.remove(subUnit);
+	}
 
-    /**
-     * Returns a member object that reflects the specified public member method
-     * of the class or interface represented by this Class object.
-     */
-    // public MemberUnit getMember(String signature) {
-    // if (signature == null) throw new NullPointerException();
-    //
-    // ClassUnit clazz = this;
-    // do {
-    // MemberUnit member = clazz.getDeclaredMember(signature);
-    // if (member != null) return member;
-    // clazz = clazz.getSuperUnit();
-    // } while (clazz != null);
-    //
-    // return null;
-    // }
+	public Collection<ClassUnit> getSubUnits() {
+		return subUnits;
+	}
 
-    public Collection<MemberUnit> getMembers(String signature) {
-        if (signature == null)
-            throw new NullPointerException();
-        ArrayList<MemberUnit> list = new ArrayList<MemberUnit>();
+	/**
+	 * Returns the declared member with the specified signature.
+	 */
+	public MemberUnit getDeclaredMember(String signature) {
+		if (signature == null)
+			throw new NullPointerException();
+		return declaredMembers.get(signature);
+	}
 
-        for (ClassUnit clazz : getSupertypes()) {
-            MemberUnit member = clazz.getDeclaredMember(signature);
-            if (member != null)
-                list.add(member);
-        }
+	/**
+	 * Returns all types to which this class can be converted, i.e., the
+	 * collection of all supertypes and implemented interfaces and the class
+	 * itself.
+	 */
+	public Collection<ClassUnit> getSupertypes() {
+		TypeCollector collector = new TypeCollector();
+		project.visitSuperTypes(this, collector);
+		return collector.collectedTypes;
+	}
 
-        return list;
-    }
+	/**
+	 * Returns a member object that reflects the specified public member method
+	 * of the class or interface represented by this Class object.
+	 */
+	// public MemberUnit getMember(String signature) {
+	// if (signature == null) throw new NullPointerException();
+	//
+	// ClassUnit clazz = this;
+	// do {
+	// MemberUnit member = clazz.getDeclaredMember(signature);
+	// if (member != null) return member;
+	// clazz = clazz.getSuperUnit();
+	// } while (clazz != null);
+	//
+	// return null;
+	// }
 
-    public Collection<MemberUnit> getDeclaredMembers() {
-        if (!isResolved)
-            throw new RuntimeException(
-                    "Class is not yet resolved: " + getName());
-        return declaredMembers.values();
-    }
+	public Collection<MemberUnit> getMembers(String signature) {
+		if (signature == null)
+			throw new NullPointerException();
+		ArrayList<MemberUnit> list = new ArrayList<MemberUnit>();
 
-    public void addMemberUnit(MemberUnit unit) {
-        declaredMembers.put(unit.getSignature().toString(), unit);
-    }
+		for (ClassUnit clazz : getSupertypes()) {
+			MemberUnit member = clazz.getDeclaredMember(signature);
+			if (member != null)
+				list.add(member);
+		}
 
-    public ClassUnit getSuperUnit() {
-        return superUnit;
-    }
+		return list;
+	}
 
-    public void setSuperUnit(ClassUnit theSuperUnit) {
-        if (superUnit != null) {
-            superUnit.removeSubUnit(this);
-        }
-        superUnit = theSuperUnit;
-        if (superUnit != null) {
-            superUnit.addSubUnit(this);
-        }
-    }
+	public Collection<MemberUnit> getDeclaredMembers() {
+		if (!isResolved())
+			throw new RuntimeException("Class is not yet resolved: " + getName());
+		return declaredMembers.values();
+	}
 
-    public void write(int depth, Writer writer) throws IOException {
-        if (!isTainted())
-            return;
+	public void addMemberUnit(MemberUnit unit) {
+		declaredMembers.put(unit.getSignature().toString(), unit);
+	}
 
-        Log.getLogger().debug(getIndent(depth) + this);
+	public ClassUnit getSuperUnit() {
+		return superUnit;
+	}
 
-        if (getData() != null) {
-            writer.write(getData());
-        } else {
-            // TODO: Is it correct to return so soon?
-            return;
-        }
+	public void setSuperUnit(ClassUnit theSuperUnit) {
+		if (superUnit != null) {
+			superUnit.removeSubUnit(this);
+		}
+		superUnit = theSuperUnit;
+		if (superUnit != null) {
+			superUnit.addSubUnit(this);
+		}
+	}
 
-        if (interfaces.size() > 0) {
-            // Logger.getLogger().info("Class + " + this.getName() + " has
-            // interfaces: ");
+	public void write(int depth, Writer writer) throws IOException {
+		if (!isTainted())
+			return;
 
-            writer.write("_T.interfaces = [");
-            int i = 0;
-            for (ClassUnit interFace : interfaces) {
-                // Logger.getLogger().info(">>>" + interFace.getName());
-                if (i++ > 0)
-                    writer.write(", ");
-                writer.write(String.valueOf(interFace.getSignature().getId()));
-            }
-            writer.write("];\n");
-        }
+		Log.getLogger().debug(getIndent(depth) + this);
 
-        for (MemberUnit member : getDeclaredMembers()) {
-            if (member.isTainted()) {
-                member.write(depth + 1, writer);
-                if (member instanceof ProcedureUnit) {
-                    project.currentGeneratedMethods++;
-                    writer.flush();
-                }
-            }
-        }
+		if (getData() != null) {
+			writer.write(getData());
+		} else {
+			// TODO: Is it correct to return so soon?
+			return;
+		}
 
-        for (ClassUnit child : getSubUnits()) {
-            // TODO Interface: Interfaces must not extend java.lang.Object!
-            // if (!child.isInterface) {
-            child.write(depth + 1, writer);
-            // }
-        }
-    }
+		if (interfaces.size() > 0) {
+			// Logger.getLogger().info("Class + " + this.getName() + " has
+			// interfaces: ");
 
-    void setSignature(Signature theSignature) {
-        super.setSignature(theSignature);
-    }
+			writer.write("_T.interfaces = [");
+			int i = 0;
+			for (ClassUnit interFace : interfaces) {
+				// Logger.getLogger().info(">>>" + interFace.getName());
+				if (i++ > 0)
+					writer.write(", ");
+				writer.write(String.valueOf(interFace.getSignature().getId()));
+			}
+			writer.write("];\n");
+		}
 
-    public FileObject getClassFile() {
-        if (classFile == null) {
-            classFile = fileManager.getFileForInput(
-                    getSignature().toString().replaceAll("\\.", "/")
-                            + ".class");
-        }
-        return classFile;
-    }
+		for (MemberUnit member : getDeclaredMembers()) {
+			if (member.isTainted()) {
+				member.write(depth + 1, writer);
+				if (member instanceof ProcedureUnit) {
+					project.currentGeneratedMethods++;
+					writer.flush();
+				}
+			}
+		}
 
-    public void setLastCompiled(long theLastCompiled) {
-        lastCompiled = theLastCompiled;
-    }
+		for (ClassUnit child : getSubUnits()) {
+			// TODO Interface: Interfaces must not extend java.lang.Object!
+			// if (!child.isInterface) {
+			child.write(depth + 1, writer);
+			// }
+		}
+	}
 
-    public boolean isResolved() {
-        return isResolved;
-    }
+	void setSignature(Signature theSignature) {
+		super.setSignature(theSignature);
+	}
 
-    public void setSuperTainted() {
-        ClassUnit clazz = this;
-        do {
-            clazz.setTainted();
-            clazz = clazz.getSuperUnit();
-        } while (clazz != null);
+	public FileObject getClassFile() {
+		if (classFile == null) {
+			classFile = fileManager.getFileForInput(getSignature().toString().replaceAll("\\.", "/") + ".class");
+		}
+		return classFile;
+	}
 
-        for (ClassUnit i : interfaces) {
-            i.setSuperTainted();
-        }
-    }
+	public void setLastCompiled(long theLastCompiled) {
+		lastCompiled = theLastCompiled;
+	}
 
-    public void setResolved(boolean theIsResolved) {
-        isResolved = theIsResolved;
-    }
+	public void setSuperTainted() {
+		ClassUnit clazz = this;
+		do {
+			clazz.setTainted();
+			clazz = clazz.getSuperUnit();
+		} while (clazz != null);
 
-    public String getName() {
-        return getSignature().className();
-    }
+		for (ClassUnit i : interfaces) {
+			i.setSuperTainted();
+		}
+	}
 
-    public Project getProject() {
-        return project;
-    }
+	public String getName() {
+		return getSignature().className();
+	}
+
+	public Project getProject() {
+		return project;
+	}
+
+	public void setPartial(boolean isPartial) {
+		this.isPartial = isPartial;
+	}
+
+	public boolean isPartial() {
+		return isPartial;
+	}
 
 }

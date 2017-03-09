@@ -15,6 +15,7 @@ public class Method implements ExtInvocation<Tuple<String, MethodContext>> {
 		ps.println("");
 		ExtRegistry.get().invoke("method.name", ps, input);
 		ExtRegistry.get().invoke("method.params", ps, input);
+		ExtRegistry.get().invoke("method.return", ps, input);
 		ExtRegistry.get().invoke("method.body.start", ps, input);
 		ExtRegistry.get().invoke("method.body.end", ps, input);
 		ch.next(ps, input);

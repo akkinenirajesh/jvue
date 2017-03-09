@@ -3,6 +3,8 @@ package com.j2js.cfg.transformation;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.bcel.generic.Type;
+
 import com.j2js.assembly.Project;
 import com.j2js.cfg.Edge;
 import com.j2js.cfg.Node;
@@ -10,11 +12,13 @@ import com.j2js.cfg.SwitchEdge;
 import com.j2js.dom.ASTNode;
 import com.j2js.dom.ArrayAccess;
 import com.j2js.dom.Block;
+import com.j2js.dom.Expression;
 import com.j2js.dom.MethodInvocation;
 import com.j2js.dom.NumberLiteral;
 import com.j2js.dom.StringLiteral;
 import com.j2js.dom.SwitchCase;
 import com.j2js.dom.SwitchStatement;
+import com.j2js.util.TypeUtils;
 
 /**
  */
@@ -74,16 +78,14 @@ public class Switch extends Transformation {
 			if (child instanceof MethodInvocation) {
 				MethodInvocation mi = (MethodInvocation) child;
 				MethodInvocation field = (MethodInvocation) mi.getNextSibling();
-				switchStmt.setExpression(field.getExpression());
-				String name = mi.getMethodBinding().getName();
-				if (name.contains("$SWITCH_TABLE$")) {
-					String type = name.split("\\$SWITCH_TABLE\\$")[1].replace("$", ".");
-					try {
-						switchStmt.setEnumCls(Project.getSingleton().fileManager.getClassLoader().loadClass(type));
-						isEnum = true;
-					} catch (ClassNotFoundException e) {
-						throw new RuntimeException(e);
-					}
+				Expression expression = field.getExpression();
+				Type typeBinding = expression.getTypeBinding();
+				String name = TypeUtils.extractClassName(typeBinding.toString());
+				Class<?> cls = getEnumClass(name);
+				if (cls != null && cls.isEnum()) {
+					switchStmt.setEnumCls(cls);
+					isEnum = true;
+					switchStmt.setExpression(expression);
 				}
 			}
 		}
@@ -109,6 +111,15 @@ public class Switch extends Transformation {
 		}
 
 		block.appendChild(switchStmt);
+	}
+
+	private Class<?> getEnumClass(String type) {
+		try {
+			return Project.getSingleton().fileManager.getClassLoader().loadClass(type);
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+			return null;
+		}
 	}
 
 	public String toString() {

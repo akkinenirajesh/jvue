@@ -12,6 +12,7 @@ public class MethodContext {
 	private TSPrintStream body;
 	private List<MethodContext> list;
 	private TypeContext typeContext;
+	private int access;
 
 	public MethodContext(TypeContext typeContext, MethodDeclaration method, List<MethodContext> list) {
 		this.typeContext = typeContext;
@@ -19,6 +20,17 @@ public class MethodContext {
 		this.list = list;
 		this.params = new TSPrintStream();
 		this.body = new TSPrintStream();
+		if (method != null) {
+			this.access = method.getAccess();
+		}
+	}
+
+	public void setAccess(int access) {
+		this.access = access;
+	}
+
+	public void addAccess(int access) {
+		this.access |= access;
 	}
 
 	public MethodDeclaration getMethod() {
@@ -43,5 +55,9 @@ public class MethodContext {
 
 	public List<MethodContext> getList() {
 		return list;
+	}
+
+	public int getAccess() {
+		return access;
 	}
 }

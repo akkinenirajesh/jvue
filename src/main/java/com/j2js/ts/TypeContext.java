@@ -3,6 +3,7 @@ package com.j2js.ts;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,16 +13,19 @@ import java.util.Set;
 
 import org.apache.bcel.generic.ObjectType;
 
+import com.j2js.assembly.Project;
 import com.j2js.dom.MethodBinding;
 import com.j2js.dom.MethodDeclaration;
 import com.j2js.dom.TypeDeclaration;
 import com.j2js.ext.ExtRegistry;
+import com.j2js.util.TypeUtils;
 
 public class TypeContext {
 
 	private ByteArrayOutputStream io;
 
 	private Map<String, List<MethodContext>> methods = new HashMap<>();
+	private Map<String, List<MethodContext>> staticMethods = new HashMap<>();
 
 	private Map<String, TypeContext> anonymousClasses = new HashMap<>();
 
@@ -33,14 +37,24 @@ public class TypeContext {
 
 	private TypeContext parent;
 
-	public TypeContext(TypeDeclaration type) {
+	private boolean isEnum;
+
+	private J2TSCompiler compiler;
+
+	public TypeContext(J2TSCompiler compiler, TypeDeclaration type) {
+		this.compiler = compiler;
 		this.type = type;
 		fields = new TSPrintStream();
+		this.isEnum = Project.getSingleton().isEnum(type.getClassName());
 	}
 
-	private TypeContext(TypeContext parent, TypeDeclaration type) {
-		this(type);
+	private TypeContext(J2TSCompiler compiler, TypeContext parent, TypeDeclaration type) {
+		this(compiler, type);
 		this.parent = parent;
+	}
+
+	public boolean isEnum() {
+		return isEnum;
 	}
 
 	public byte[] toByteArray() {
@@ -52,11 +66,12 @@ public class TypeContext {
 	}
 
 	public MethodContext getMethod(MethodDeclaration method) {
+		Map<String, List<MethodContext>> mm = Modifier.isStatic(method.getAccess()) ? staticMethods : methods;
 		MethodBinding binding = method.getMethodBinding();
 		String name = binding.getName();
-		List<MethodContext> list = methods.get(name);
+		List<MethodContext> list = mm.get(name);
 		if (list == null) {
-			methods.put(name, list = new ArrayList<>());
+			mm.put(name, list = new ArrayList<>());
 		}
 		MethodContext mc = new MethodContext(this, method, list);
 		list.add(mc);
@@ -70,7 +85,7 @@ public class TypeContext {
 	public TypeContext getAnonymous(String name, TypeDeclaration type) {
 		TypeContext c = getAnonymous(name);
 		if (c == null) {
-			c = new TypeContext(this, type);
+			c = new TypeContext(compiler, this, type);
 			anonymousClasses.put(name, c);
 		}
 		return c;
@@ -80,13 +95,8 @@ public class TypeContext {
 		if (parent != null) {
 			parent.addImports(type);
 		} else {
-			String name = type.getClassName();
-			if (name.startsWith("[")) {
-				name = name.substring(1, name.length());
-			}
-			if (name.endsWith(";")) {
-				name = name.substring(1, name.length() - 1);
-			}
+			String name = TypeUtils.extractClassName(type.getClassName());
+
 			// Do not add anonymous imports as they wont refer from other
 			// classes
 			if (name.contains("$")) {
@@ -95,6 +105,11 @@ public class TypeContext {
 
 			// Don't need to import same class
 			if (name.equals(this.type.getClassName())) {
+				return;
+			}
+
+			if (name.length() == 1) {
+				// It is primitive type
 				return;
 			}
 
@@ -114,13 +129,22 @@ public class TypeContext {
 		return methods;
 	}
 
+	public Map<String, List<MethodContext>> getStaticMethods() {
+		return staticMethods;
+	}
+
 	public Map<String, TypeContext> getAnonymousClasses() {
 		return anonymousClasses;
 	}
 
 	public void write(PrintStream ps) throws IOException {
-
-		ExtRegistry.get().invoke("class", ps, this);
+		ExtRegistry.get().invoke("pkg.start", ps, this);
+		if (isEnum) {
+			ExtRegistry.get().invoke("enum", ps, this);
+		} else {
+			ExtRegistry.get().invoke("class", ps, this);
+		}
+		ExtRegistry.get().invoke("pkg.end", ps, this);
 
 		anonymousClasses.forEach((n, c) -> {
 			try {
@@ -130,6 +154,10 @@ public class TypeContext {
 				throw new RuntimeException(e);
 			}
 		});
+	}
+
+	public J2TSCompiler getCompiler() {
+		return compiler;
 	}
 
 	@Override

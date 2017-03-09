@@ -4,6 +4,11 @@ import java.util.Collection;
 import java.util.Iterator;
 
 public class TSHelper {
+
+	public static String getPkgName(String fullName) {
+		return fullName.substring(0, fullName.lastIndexOf("."));
+	}
+
 	public static String getSimpleName(String fullName) {
 		return fullName.substring(fullName.lastIndexOf(".") + 1);
 	}
