@@ -1,10 +1,12 @@
 package com.j2js.ext;
 
-import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.j2js.assembly.Project;
 import com.j2js.ext.j2ts.J2TSExtRegistry;
+import com.j2js.ts.J2TSCompiler;
+import com.j2js.ts.TypeScriptGenerator;
 
 public class ExtRegistry {
 
@@ -36,35 +38,7 @@ public class ExtRegistry {
 		list.add(invoke, order);
 	}
 
-	public <I> void invoke(String point, PrintStream ps, Object input) {
-		ExtInvocationList list = points.get(point);
-		if (list == null) {
-			return;
-		}
-		ExtChain ch = new ExtChainImpl(list);
-		ch.next(ps, input);
-	}
-
-	private class ExtChainImpl implements ExtChain {
-
-		private ExtInvocationList list;
-		private int ind;
-
-		public ExtChainImpl(ExtInvocationList list) {
-			this.list = list;
-		}
-
-		@Override
-		public void next(PrintStream ps, Object input) {
-			if (ind == list.size()) {
-				return;
-			}
-			ExtInvocation inv = list.get(ind++);
-			inv.invoke(ps, input, this);
-		}
-	}
-
-	private class ExtInvocationList extends OrderedList<ExtInvocation<?>> {
-
+	public static ExtInvoker createInvoker(Project project, J2TSCompiler compiler, TypeScriptGenerator generator) {
+		return new ExtInvoker(get().points, project, compiler, generator);
 	}
 }

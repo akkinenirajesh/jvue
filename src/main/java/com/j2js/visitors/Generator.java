@@ -4,7 +4,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 
-import com.j2js.J2JSSettings;
 import com.j2js.Log;
 import com.j2js.dom.TypeDeclaration;
 
@@ -22,8 +21,11 @@ public abstract class Generator extends AbstractVisitor {
 
 	protected TypeDeclaration typeDecl;
 
-	public Generator() {
-		if (J2JSSettings.compression) {
+	protected boolean compression;
+
+	public Generator(boolean compression) {
+		this.compression = compression;
+		if (compression) {
 			whiteSpace = "";
 		} else {
 			whiteSpace = " ";
@@ -49,7 +51,7 @@ public abstract class Generator extends AbstractVisitor {
 
 	public void indent() {
 		// No indentation if compression is on.
-		if (J2JSSettings.compression)
+		if (compression)
 			return;
 		String INDENT = "\t";
 		if (indents == null || depth >= indents.length) {

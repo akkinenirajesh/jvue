@@ -10,13 +10,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
 import org.apache.bcel.generic.ObjectType;
 
-import com.j2js.J2JSSettings;
 import com.j2js.dom.TypeDeclaration;
-import com.j2js.ext.ExtRegistry;
+import com.j2js.ext.ExtInvoker;
 
 public class PkgContext {
 
@@ -39,7 +37,7 @@ public class PkgContext {
 		if (split.length == 1) {
 			TypeContext cls = clss.get(split[0]);
 			if (cls == null) {
-				cls = new TypeContext(compiler, type);
+				cls = new TypeContext(type);
 				clss.put(split[0], cls);
 			}
 			addToOrderedClasses(type);
@@ -59,7 +57,7 @@ public class PkgContext {
 					System.err.println("Need to skip this class " + name);
 				}
 			}
-			TypeContext cls = s.getAnonymous(split[split.length - 1], type);
+			TypeContext cls = s.getInnerClass(split[split.length - 1], type);
 			return cls;
 		}
 	}
@@ -95,13 +93,15 @@ public class PkgContext {
 		}
 	}
 
-	public void write(File base) {
+	public void write(ExtInvoker inv, File base) {
+
 		foreachOrdeby((s, st) -> {
-			File file = new File(base, s + "." + J2JSSettings.ext);
+			File file = new File(base, s + "." + compiler.settings.ext);
 			try {
 				PrintStream single = new PrintStream(new FileOutputStream(file));
-				ExtRegistry.get().invoke("file.create", single, null);
-				st.write(single);
+				inv.invoke("file.create", single, null);
+				st.write(inv, single);
+				inv.invoke("file.end", single, null);
 				single.flush();
 				single.close();
 			} catch (Exception e) {
@@ -110,15 +110,17 @@ public class PkgContext {
 		});
 	}
 
-	public void write(PrintStream ps) {
-//		Set<String> totalImports = clss.values().stream().map(c -> c.getImports()).flatMap(is -> is.stream()).distinct()
-//				.filter(i -> !generatedClasses.contains(i)).collect(Collectors.toSet());
-//		ExtRegistry.get().invoke("imports", ps, totalImports);
+	public void write(ExtInvoker inv, PrintStream ps) {
+		// Set<String> totalImports = clss.values().stream().map(c ->
+		// c.getImports()).flatMap(is -> is.stream()).distinct()
+		// .filter(i ->
+		// !generatedClasses.contains(i)).collect(Collectors.toSet());
+		// ExtRegistry.get().invoke("imports", ps, totalImports);
 
 		foreachOrdeby((s, st) -> {
 			try {
 				ps.println();
-				st.write(ps);
+				st.write(inv, ps);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

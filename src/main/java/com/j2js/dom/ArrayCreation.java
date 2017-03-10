@@ -11,22 +11,22 @@ import com.j2js.visitors.AbstractVisitor;
  * @author wolfgang
  */
 public class ArrayCreation extends Expression {
-	
+
 	private List<ASTNode> dimensions;
 	private ArrayInitializer initializer;
-	
-    public ArrayCreation(MethodDeclaration methodDecl, Type theType, List<ASTNode> theDimensions) {
-        type = theType;
-        dimensions = theDimensions;
-        for (ASTNode dimension : dimensions) {
-            this.widen(dimension);
-        }
-        Project.getSingleton().addReference(methodDecl, this);
-    }
-    
+
+	public ArrayCreation(Project project, MethodDeclaration methodDecl, Type theType, List<ASTNode> theDimensions) {
+		type = theType;
+		dimensions = theDimensions;
+		for (ASTNode dimension : dimensions) {
+			this.widen(dimension);
+		}
+		project.addReference(methodDecl, this);
+	}
+
 	public void visit(AbstractVisitor visitor) {
-	    visitor.visit(this);
-    }
+		visitor.visit(this);
+	}
 
 	/**
 	 * @return Returns the initializer.
@@ -34,12 +34,15 @@ public class ArrayCreation extends Expression {
 	public ArrayInitializer getInitializer() {
 		return initializer;
 	}
+
 	/**
-	 * @param theInitializer The initializer to set.
+	 * @param theInitializer
+	 *            The initializer to set.
 	 */
 	public void setInitializer(ArrayInitializer theInitializer) {
 		initializer = theInitializer;
 	}
+
 	/**
 	 * @return Returns the dimensions.
 	 */

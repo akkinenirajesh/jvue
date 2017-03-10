@@ -13,10 +13,10 @@ import java.util.Set;
 
 import org.apache.bcel.generic.ObjectType;
 
-import com.j2js.assembly.Project;
 import com.j2js.dom.MethodBinding;
 import com.j2js.dom.MethodDeclaration;
 import com.j2js.dom.TypeDeclaration;
+import com.j2js.ext.ExtInvoker;
 import com.j2js.ext.ExtRegistry;
 import com.j2js.util.TypeUtils;
 
@@ -37,24 +37,14 @@ public class TypeContext {
 
 	private TypeContext parent;
 
-	private boolean isEnum;
-
-	private J2TSCompiler compiler;
-
-	public TypeContext(J2TSCompiler compiler, TypeDeclaration type) {
-		this.compiler = compiler;
+	public TypeContext(TypeDeclaration type) {
 		this.type = type;
 		fields = new TSPrintStream();
-		this.isEnum = Project.getSingleton().isEnum(type.getClassName());
 	}
 
-	private TypeContext(J2TSCompiler compiler, TypeContext parent, TypeDeclaration type) {
-		this(compiler, type);
+	private TypeContext(TypeContext parent, TypeDeclaration type) {
+		this(type);
 		this.parent = parent;
-	}
-
-	public boolean isEnum() {
-		return isEnum;
 	}
 
 	public byte[] toByteArray() {
@@ -82,10 +72,10 @@ public class TypeContext {
 		return anonymousClasses.get(name);
 	}
 
-	public TypeContext getAnonymous(String name, TypeDeclaration type) {
+	public TypeContext getInnerClass(String name, TypeDeclaration type) {
 		TypeContext c = getAnonymous(name);
 		if (c == null) {
-			c = new TypeContext(compiler, this, type);
+			c = new TypeContext(this, type);
 			anonymousClasses.put(name, c);
 		}
 		return c;
@@ -137,27 +127,23 @@ public class TypeContext {
 		return anonymousClasses;
 	}
 
-	public void write(PrintStream ps) throws IOException {
-		ExtRegistry.get().invoke("pkg.start", ps, this);
-		if (isEnum) {
-			ExtRegistry.get().invoke("enum", ps, this);
+	public void write(ExtInvoker inv, PrintStream ps) throws IOException {
+		inv.invoke("pkg.start", ps, this);
+		if (type.isEnum()) {
+			inv.invoke("enum", ps, this);
 		} else {
-			ExtRegistry.get().invoke("class", ps, this);
+			inv.invoke("class", ps, this);
 		}
-		ExtRegistry.get().invoke("pkg.end", ps, this);
+		inv.invoke("pkg.end", ps, this);
 
 		anonymousClasses.forEach((n, c) -> {
 			try {
 				ps.println();
-				c.write(ps);
+				c.write(inv, ps);
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 		});
-	}
-
-	public J2TSCompiler getCompiler() {
-		return compiler;
 	}
 
 	@Override

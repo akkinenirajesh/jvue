@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Modifier;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
@@ -23,22 +24,44 @@ import com.j2js.ts.VisitorInput;
 
 public class J2JSExtRegistry {
 
+	private static boolean registered;
+
 	public static void register() {
+		if (registered) {
+			return;
+		}
+		registered = true;
 		ExtRegistry r = ExtRegistry.get();
 
-//		r.add("file.create", new ExtInvocation<Object>() {
-//
-//			@Override
-//			public void invoke(PrintStream ps, Object input, ExtChain ch) {
-//				try {
-//					InputStream is = J2JSExtRegistry.class.getClassLoader().getResourceAsStream("javascript/j4ts.js");
-//					IOUtils.copy(is, ps);
-//					is.close();
-//				} catch (Exception e) {
-//					e.printStackTrace();
-//				}
-//			}
-//		}, -1);
+		r.add("file.create", new ExtInvocation<Object>() {
+
+			@Override
+			public void invoke(PrintStream ps, Object input, ExtChain ch) {
+				try {
+					InputStream is = J2JSExtRegistry.class.getClassLoader().getResourceAsStream("javascript/j4ts.js");
+					IOUtils.copy(is, ps);
+					is.close();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}, -1);
+
+		// r.add("file.create", new ExtInvocation<Object>() {
+		//
+		// @Override
+		// public void invoke(PrintStream ps, Object input, ExtChain ch) {
+		// ps.println("\"use strict\";");
+		// ps.println("var __extends = (this && this.__extends) || function (d,
+		// b) {");
+		// ps.println("\tfor (var p in b) if (b.hasOwnProperty(p)) d[p] =
+		// b[p];");
+		// ps.println("\tfunction __() { this.constructor = d; }");
+		// ps.println("\td.prototype = b === null ? Object.create(b) :
+		// (__.prototype = b.prototype, new __());");
+		// ps.println("};");
+		// }
+		// }, -1);
 
 		r.add("imports", new ExtInvocation<Set<String>>() {
 
@@ -105,11 +128,32 @@ public class J2JSExtRegistry {
 			@Override
 			public void invoke(PrintStream ps, TypeContext input, ExtChain ch) {
 				if (input.getType().hasSuperClass()) {
-					ps.print("\t__extends(Account, _super);");
+					ps.print("\t__extends(");
+					ps.print(TSHelper.getSimpleName(input.getType().getClassName()));
+					ps.print(", _super);");
+				}
+
+				List<MethodContext> list = input.getMethods().get("<init>");
+				if (list == null || list.isEmpty()) {
+					ps.print("\tfunction ");
+					ps.print(TSHelper.getSimpleName(input.getType().getClassName()));
+					ps.println("() {");
+					ps.println("\t};");
 				}
 				ch.next(ps, input);
 			}
 		}, -1);
+
+		r.add("class.body", new ExtInvocation<TypeContext>() {
+
+			@Override
+			public void invoke(PrintStream ps, TypeContext input, ExtChain ch) {
+				ps.print("\treturn ");
+				ps.print(TSHelper.getSimpleName(input.getType().getClassName()));
+				ps.println(";");
+				ch.next(ps, input);
+			}
+		}, 1);
 
 		r.add("field.visit", new ExtInvocation<VisitorInput<VariableDeclaration>>() {
 
@@ -239,10 +283,10 @@ public class J2JSExtRegistry {
 				// var security;
 				// (function (security) {
 				String s = split[0];
-				Set<String> pkgs = input.getCompiler().getAttr("pkg_decl");
+				Set<String> pkgs = ch.getCompiler().getAttr("pkg_decl");
 				if (pkgs == null) {
 					pkgs = new HashSet<>();
-					input.getCompiler().putAttr("pkg_decl", pkgs);
+					ch.getCompiler().putAttr("pkg_decl", pkgs);
 				}
 				if (!pkgs.contains(s)) {
 					pkgs.add(s);

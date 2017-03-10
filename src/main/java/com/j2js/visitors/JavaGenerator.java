@@ -4,114 +4,118 @@ import java.io.PrintStream;
 import java.lang.reflect.Modifier;
 import java.util.Iterator;
 
-import com.j2js.J2JSCompiler;
+import com.j2js.J2JSSettings;
 import com.j2js.Log;
-import com.j2js.dom.*;
 import com.j2js.Utils;
+import com.j2js.dom.ASTNode;
+import com.j2js.dom.MethodBinding;
+import com.j2js.dom.MethodDeclaration;
+import com.j2js.dom.TypeDeclaration;
+import com.j2js.dom.VariableDeclaration;
 
 /**
  * @author kuehn
  */
 public class JavaGenerator extends Generator {
 
-    /** Creates a new instance of Generator */
-    public JavaGenerator() {
-    }
+	/** Creates a new instance of Generator */
+	public JavaGenerator() {
+		super(false);
+	}
 
-    public JavaGenerator(PrintStream targetStream) {
-        setOutputStream(targetStream);
-    }
+	public JavaGenerator(PrintStream targetStream) {
+		super(false);
+		setOutputStream(targetStream);
+	}
 
-    public void visit(ASTNode node) {
-    }
+	public void visit(ASTNode node) {
+	}
 
-    /**
-     * This method must be call first because it sets the global className.
-     */
-    public void visit(TypeDeclaration theTypeDecl) {
-        Log logger = Log.getLogger();
-        logger.info("Generating Java for " + theTypeDecl);
+	/**
+	 * This method must be call first because it sets the global className.
+	 */
+	public void visit(TypeDeclaration theTypeDecl) {
+		Log logger = Log.getLogger();
+		logger.info("Generating Java for " + theTypeDecl);
 
-        depth = 0;
-        typeDecl = theTypeDecl;
+		depth = 0;
+		typeDecl = theTypeDecl;
 
-        println("package " + theTypeDecl.getPackageName() + ";");
-        println("");
-        print("public ");
-        if (Modifier.isFinal(theTypeDecl.getAccess()))
-            print("final ");
+		println("package " + theTypeDecl.getPackageName() + ";");
+		println("");
+		print("public ");
+		if (Modifier.isFinal(theTypeDecl.getAccess()))
+			print("final ");
 
-        println("class " + theTypeDecl.getUnQualifiedName() + " {");
+		println("class " + theTypeDecl.getUnQualifiedName() + " {");
 
-        depth++;
+		depth++;
 
-        MethodDeclaration[] methods = theTypeDecl.getMethods();
-        for (int i = 0; i < methods.length; i++) {
-            MethodDeclaration method = methods[i];
-            try {
-                method.visit(this);
-            } catch (RuntimeException ex) {
-                throw Utils.generateException(ex, method, null);
-            }
-        }
+		MethodDeclaration[] methods = theTypeDecl.getMethods();
+		for (int i = 0; i < methods.length; i++) {
+			MethodDeclaration method = methods[i];
+			try {
+				method.visit(this);
+			} catch (RuntimeException ex) {
+				throw Utils.generateException(ex, method, null);
+			}
+		}
 
-        depth--;
+		depth--;
 
-        println("}");
+		println("}");
 
-    }
+	}
 
-    /**
-     */
-    public void visit(MethodDeclaration method) {
-        MethodBinding methodBinding = method.getMethodBinding();
+	/**
+	 */
+	public void visit(MethodDeclaration method) {
+		MethodBinding methodBinding = method.getMethodBinding();
 
-        println("");
-        indent("");
+		println("");
+		indent("");
 
-        if (Modifier.isPrivate(method.getAccess()))
-            print("private ");
-        if (Modifier.isProtected(method.getAccess()))
-            print("protected ");
-        if (Modifier.isPublic(method.getAccess()))
-            print("public ");
-        if (Modifier.isStatic(method.getAccess()))
-            print("static ");
-        if (Modifier.isNative(method.getAccess()))
-            print("native ");
-        if (Modifier.isAbstract(method.getAccess()))
-            print("abstract ");
-        if (Modifier.isFinal(method.getAccess()))
-            print("final ");
+		if (Modifier.isPrivate(method.getAccess()))
+			print("private ");
+		if (Modifier.isProtected(method.getAccess()))
+			print("protected ");
+		if (Modifier.isPublic(method.getAccess()))
+			print("public ");
+		if (Modifier.isStatic(method.getAccess()))
+			print("static ");
+		if (Modifier.isNative(method.getAccess()))
+			print("native ");
+		if (Modifier.isAbstract(method.getAccess()))
+			print("abstract ");
+		if (Modifier.isFinal(method.getAccess()))
+			print("final ");
 
-        if (method.isInstanceConstructor()) {
-            print(typeDecl.getUnQualifiedName());
-        } else {
-            print(methodBinding.getReturnType().toString() + " "
-                    + methodBinding.getName());
-        }
+		if (method.isInstanceConstructor()) {
+			print(typeDecl.getUnQualifiedName());
+		} else {
+			print(methodBinding.getReturnType().toString() + " " + methodBinding.getName());
+		}
 
-        print("(");
+		print("(");
 
-        Iterator iterator = method.getParameters().iterator();
-        while (iterator.hasNext()) {
-            VariableDeclaration decl = (VariableDeclaration) iterator.next();
-            decl.visit(this);
-            print(iterator.hasNext() ? ", " : "");
-        }
+		Iterator iterator = method.getParameters().iterator();
+		while (iterator.hasNext()) {
+			VariableDeclaration decl = (VariableDeclaration) iterator.next();
+			decl.visit(this);
+			print(iterator.hasNext() ? ", " : "");
+		}
 
-        print(")");
+		print(")");
 
-        if (Modifier.isNative(method.getAccess())
-                || Modifier.isAbstract(method.getAccess()))
-            println(";");
-        else
-            println(" {}");
+		if (Modifier.isNative(method.getAccess()) || Modifier.isAbstract(method.getAccess()))
+			println(";");
+		else
+			println(" {}");
 
-    }
+	}
 
-    public void visit(VariableDeclaration decl) {
-        print(decl.getType().toString() + " " + decl.getName());
-    }
+	public void visit(VariableDeclaration decl) {
+		print(decl.getType().toString() + " " + decl.getName());
+	}
 
 }

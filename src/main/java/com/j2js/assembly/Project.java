@@ -1,11 +1,6 @@
 package com.j2js.assembly;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -25,7 +20,6 @@ import org.apache.bcel.generic.Type;
 import com.j2js.FileManager;
 import com.j2js.J2JSCompiler;
 import com.j2js.J2JSSettings;
-import com.j2js.Log;
 import com.j2js.Utils;
 import com.j2js.dom.ArrayCreation;
 import com.j2js.dom.FieldAccess;
@@ -40,18 +34,12 @@ public class Project implements Serializable {
 
 	static final long serialVersionUID = 0;
 
-	private static Project singleton;
-
 	// All managed classes mapped by class name.
-	private Map<String, ClassUnit> classesByName;
+	private Map<String, ClassUnit> classesByName = new HashMap<>();
 
 	private ClassUnit javaLangObject;
 
-	private boolean compressed;
-
-	private boolean generateLineNumbers;
-
-	private Map<String, Signature> signatures;
+	private Map<String, Signature> signatures = new HashMap<>();
 
 	private transient Stack<Integer> ids;
 
@@ -71,66 +59,16 @@ public class Project implements Serializable {
 
 	private Set<String> objectMethods = new HashSet<>();
 
-	private Project() {
+	private J2JSSettings settings;
+
+	public Project(J2JSSettings settings) {
 		objectMethods.add("hashCode");
 		objectMethods.add("equals");
 		objectMethods.add("toString");
 		enums.put("char", false);
 		enums.put("byte", false);
 		enums.put("int", false);
-	}
-
-	public static Project getSingleton() {
-		if (singleton == null)
-			throw new NullPointerException();
-		return singleton;
-	}
-
-	public static void clearSingleton() {
-		if (singleton != null) {
-			singleton.clear();
-			singleton = null;
-		}
-	}
-
-	public static Project createSingleton(File cacheFile) {
-
-		if (cacheFile != null && cacheFile.exists()) {
-			Log.getLogger().info("Using cache " + cacheFile);
-			try {
-				read(cacheFile);
-			} catch (Exception e) {
-				Log.getLogger().warn("Could not read cache:\n" + e.getMessage());
-			}
-		}
-
-		if (singleton == null || singleton.compressed != J2JSSettings.compression
-				|| singleton.generateLineNumbers != J2JSSettings.generateLineNumbers) {
-			// Cache does not exist, could not be read, or compression does not
-			// match.
-			singleton = new Project();
-			singleton.clear();
-		}
-
-		return singleton;
-	}
-
-	private static void read(File file) throws Exception {
-		FileInputStream fis = new FileInputStream(file);
-		ObjectInputStream ois = new ObjectInputStream(fis);
-		singleton = (Project) ois.readObject();
-		ois.close();
-	}
-
-	public static void write(J2JSCompiler compiler) throws IOException {
-		File file = compiler.getCacheFile();
-		if (file.exists() && !file.canWrite()) {
-			throw new IOException("Cannot write " + file);
-		}
-		FileOutputStream fos = new FileOutputStream(file);
-		ObjectOutputStream oos = new ObjectOutputStream(fos);
-		oos.writeObject(singleton);
-		oos.close();
+		this.settings = settings;
 	}
 
 	public Signature getArraySignature(Type type) {
@@ -157,7 +95,7 @@ public class Project implements Serializable {
 
 		Signature signature = signatures.get(signatureString);
 		if (signature == null) {
-			signature = new Signature(signatureString, getUniqueId(), J2JSSettings.compression);
+			signature = new Signature(signatureString, getUniqueId(), settings.compression);
 			signatures.put(signatureString, signature);
 		}
 
@@ -188,18 +126,6 @@ public class Project implements Serializable {
 
 		currentId++;
 		return currentId - 1;
-	}
-
-	private void clear() {
-		classesByName = new HashMap<String, ClassUnit>();
-		javaLangObject = null;
-
-		signatures = new HashMap<String, Signature>();
-		ids = null;
-		currentId = 0;
-		currentIndex = 0;
-		compressed = J2JSSettings.compression;
-		generateLineNumbers = J2JSSettings.generateLineNumbers;
 	}
 
 	public void remove(ClassUnit clazz) {
@@ -251,7 +177,7 @@ public class Project implements Serializable {
 		if (classUnit != null)
 			return classUnit;
 
-		Signature signature = Project.singleton.getSignature(className);
+		Signature signature = getSignature(className);
 		classUnit = new ClassUnit(this, fileManager, className, signature);
 		classesByName.put(className, classUnit);
 
@@ -280,13 +206,13 @@ public class Project implements Serializable {
 	}
 
 	public ProcedureUnit getProcedureUnit(MethodBinding methodBinding) {
-		Signature signature = Project.singleton.getSignature(methodBinding.getRelativeSignature());
+		Signature signature = getSignature(methodBinding.getRelativeSignature());
 		String className = methodBinding.getDeclaringClass().getClassName();
 		return (ProcedureUnit) getMemberUnit(className, signature);
 	}
 
 	public ProcedureUnit getOrCreateProcedureUnit(MethodBinding methodBinding) {
-		Signature signature = Project.singleton.getSignature(methodBinding.getRelativeSignature());
+		Signature signature = getSignature(methodBinding.getRelativeSignature());
 		String className = methodBinding.getDeclaringClass().getClassName();
 		return (ProcedureUnit) getOrCreateMemberUnit(className, signature);
 	}
@@ -320,25 +246,25 @@ public class Project implements Serializable {
 	// }
 
 	public FieldUnit getOrCreateFieldUnit(ObjectType type, String name) {
-		return (FieldUnit) getOrCreateMemberUnit(type.getClassName(), Project.singleton.getSignature(name));
+		return (FieldUnit) getOrCreateMemberUnit(type.getClassName(), getSignature(name));
 	}
 
 	public void addReference(MethodDeclaration decl, FieldAccess fa) {
 		ProcedureUnit source = getOrCreateProcedureUnit(decl.getMethodBinding());
-		source.addTarget(Project.singleton.getSignature(fa));
+		source.addTarget(getSignature(fa));
 	}
 
 	public void addReference(MethodDeclaration decl, MethodInvocation invocation) {
 		ProcedureUnit source = getOrCreateProcedureUnit(decl.getMethodBinding());
-		source.addTarget(Project.singleton.getSignature(invocation.getMethodBinding().toString()));
+		source.addTarget(getSignature(invocation.getMethodBinding().toString()));
 	}
 
 	public void addReference(MethodDeclaration decl, ArrayCreation ac) {
 		ProcedureUnit source = getOrCreateProcedureUnit(decl.getMethodBinding());
-		Signature signature = Project.getSingleton().getArraySignature(ac.getTypeBinding());
+		Signature signature = getArraySignature(ac.getTypeBinding());
 		for (int i = 0; i < ac.getDimensions().size(); i++) {
 			// TODO: Target must be a field or method. Is length the right way?
-			source.addTarget(Project.singleton.getSignature(signature.toString().substring(i) + "#length"));
+			source.addTarget(getSignature(signature.toString().substring(i) + "#length"));
 		}
 	}
 
@@ -362,7 +288,8 @@ public class Project implements Serializable {
 			// taint the class.
 			new FieldUnit(getSignature("length"), clazz);
 
-			TypeDeclaration typeDecl = new TypeDeclaration(new ObjectType(clazz.getName()), 0);
+			TypeDeclaration typeDecl = new TypeDeclaration(new ObjectType(clazz.getName()), 0,
+					isEnum(clazz.getClassFullName()));
 			typeDecl.setSuperType(Type.OBJECT);
 			typeDecl.visit(generator);
 		} else {
@@ -451,4 +378,27 @@ public class Project implements Serializable {
 		return res;
 	}
 
+	public J2JSSettings getSettings() {
+		return settings;
+	}
+
+	public static void clearSingleton() {
+		// TODO Auto-generated method stub
+
+	}
+
+	public static Project createSingleton(File cacheFile) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static Project getSingleton() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static void write(J2JSCompiler j2jsCompiler) {
+		// TODO Auto-generated method stub
+
+	}
 }

@@ -59,7 +59,7 @@ public class J2TSExtRegistry {
 				if (classUnit.typeDecl != null) {
 					return;
 				}
-				Parser parser = new Parser(classUnit);
+				Parser parser = new Parser(ch.getProject(), classUnit);
 				TypeDeclaration typeDecl = parser.parse();
 				classUnit.typeDecl = typeDecl;
 

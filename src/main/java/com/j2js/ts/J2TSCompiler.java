@@ -18,6 +18,7 @@ import com.j2js.assembly.MemberUnit;
 import com.j2js.assembly.Project;
 import com.j2js.dom.MethodDeclaration;
 import com.j2js.dom.TypeDeclaration;
+import com.j2js.ext.ExtInvoker;
 import com.j2js.ext.ExtRegistry;
 
 public class J2TSCompiler {
@@ -34,23 +35,16 @@ public class J2TSCompiler {
 
 	private Map<String, Object> attr = new HashMap<>();
 
-	private File basedir;
+	private Project project;
+
+	private ExtInvoker invoker;
+
+	public J2JSSettings settings;
 
 	public J2TSCompiler() {
 		this.classLoader = getClass().getClassLoader();
-		this.basedir = new File(".");
+		this.settings = new J2JSSettings();
 		Log.logger = new Log();
-	}
-
-	public void setBasedir(File basedir) {
-		if (!basedir.exists()) {
-			basedir.mkdirs();
-		}
-		this.basedir = basedir;
-	}
-
-	public File getBasedir() {
-		return basedir;
 	}
 
 	public void setClassLoader(ClassLoader classLoader) {
@@ -62,8 +56,7 @@ public class J2TSCompiler {
 			this.classes.add(cls);
 		}
 		if (process) {
-			Project project = Project.getSingleton();
-			process(project, (TypeScriptGenerator) project.generator, cls);
+			process((TypeScriptGenerator) project.generator, cls);
 		}
 
 	}
@@ -73,20 +66,21 @@ public class J2TSCompiler {
 	}
 
 	public void execute() throws Exception {
-		this.fileManager = new FileManager(classpath, classLoader);
-		Project.clearSingleton();
-		Project project = Project.createSingleton(null);
-		TypeScriptGenerator visitor = new TypeScriptGenerator(this);
+		project = new Project(settings);
+		this.fileManager = new FileManager(project, classpath, classLoader);
+		TypeScriptGenerator visitor = new TypeScriptGenerator(project, this);
 		project.generator = visitor;
 		project.fileManager = fileManager;
+		invoker = ExtRegistry.createInvoker(project, this, visitor);
+		visitor.setExtInvoker(invoker);
 		while (!classes.isEmpty()) {
 			String cls = classes.remove(0);
-			process(project, visitor, cls);
+			process(visitor, cls);
 		}
 		visitor.writeToFile();
 	}
 
-	private void process(Project project, TypeScriptGenerator visitor, String cls) {
+	private void process(TypeScriptGenerator visitor, String cls) {
 		String[] split = cls.split("#");
 		boolean isPartial = false;
 		if (split.length > 1) {
@@ -94,7 +88,7 @@ public class J2TSCompiler {
 		}
 		String fqn = split[0];
 
-		if (!J2JSSettings.allowClass.test(fqn)) {
+		if (!settings.allowClass.test(fqn)) {
 			return;
 		}
 		ClassUnit unit = project.getOrCreateClassUnit(fqn);
@@ -120,7 +114,7 @@ public class J2TSCompiler {
 			}
 			visitor.setStream(mu.getDeclaringClass().typeDecl);
 			visitor.incDepth();
-			ExtRegistry.get().invoke("method.visit", null, new VisitorInput<MethodDeclaration>(
+			invoker.invoke("method.visit", null, new VisitorInput<MethodDeclaration>(
 					mu.getDeclaringClass().typeDecl.getMethodBySignature(mu.toString()), visitor));
 		} finally {
 			visitor.decDepth();
@@ -137,7 +131,8 @@ public class J2TSCompiler {
 			// clazz.setTainted();
 			clazz.setResolved(true);
 
-			TypeDeclaration typeDecl = new TypeDeclaration(new ObjectType(clazz.getName()), 0);
+			TypeDeclaration typeDecl = new TypeDeclaration(new ObjectType(clazz.getName()), 0,
+					project.isEnum(clazz.getClassFullName()));
 			typeDecl.setSuperType(Type.OBJECT);
 			typeDecl.visit(visitor);
 		} else {
@@ -155,15 +150,15 @@ public class J2TSCompiler {
 			// Class is an array class without class file: Do nothing.
 		} else {
 			try {
-				if (!J2JSSettings.allowClass.test(clazz.toString())) {
+				if (!settings.allowClass.test(clazz.toString())) {
 					return;
 				}
 				compile(clazz, visitor);
 			} catch (RuntimeException ex) {
-				J2JSSettings.errorCount++;
+				settings.errorCount++;
 				logger.error(ex.toString());
 				// ex.printStackTrace();
-				if (J2JSSettings.failOnError) {
+				if (settings.failOnError) {
 					throw ex;
 				}
 			}
@@ -192,7 +187,7 @@ public class J2TSCompiler {
 			classUnit.getDeclaredMembers().forEach(m -> m.setResolved(true));
 		}
 
-		ExtRegistry.get().invoke("type.visit", null, new VisitorInput<ClassUnit>(classUnit, visitor));
+		invoker.invoke("type.visit", null, new VisitorInput<ClassUnit>(classUnit, visitor));
 
 		// Set not current date but date of last modification. This is
 		// independent of system clock.
@@ -227,7 +222,7 @@ public class J2TSCompiler {
 		for (String path : array) {
 			path = path.trim();
 			if (path.length() > 0) {
-				addClasspathElement(Utils.resolve(basedir, path));
+				addClasspathElement(Utils.resolve(settings.getBasedir(), path));
 			}
 		}
 	}
@@ -253,5 +248,9 @@ public class J2TSCompiler {
 
 	public void putAttr(String key, Object val) {
 		attr.put(key, val);
+	}
+
+	public Project getProject() {
+		return project;
 	}
 }

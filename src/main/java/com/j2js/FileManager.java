@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+import com.j2js.assembly.Project;
+
 /**
  * A FileManager can resolve relative file names against a class path.
  * <p>
@@ -33,7 +35,7 @@ public class FileManager {
 	 *            list of file system directories or jar files.
 	 * @param classLoader
 	 */
-	public FileManager(List<File> classPath, ClassLoader classLoader) {
+	public FileManager(Project project, List<File> classPath, ClassLoader classLoader) {
 		this.classLoader = classLoader;
 		this.compiledTime = new Date().getTime();
 		Log.getLogger().info("Resolving class path " + classPath);
@@ -42,7 +44,7 @@ public class FileManager {
 		// Non-existing files are sorted out.
 		for (File file : classPath) {
 			if (!file.exists()) {
-				J2JSSettings.errorCount++;
+				project.getSettings().errorCount++;
 				Log.getLogger().error("Cannot find resource on class path: " + file.getAbsolutePath());
 				continue;
 			}

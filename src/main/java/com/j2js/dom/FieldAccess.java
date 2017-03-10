@@ -18,8 +18,8 @@ public abstract class FieldAccess extends Expression {
 	public FieldAccess() {
 	}
 
-	public void initialize(MethodDeclaration methodDecl) {
-		Project.getSingleton().addReference(methodDecl, this);
+	public void initialize(Project project, MethodDeclaration methodDecl) {
+		project.addReference(methodDecl, this);
 	}
 
 	public void visit(AbstractVisitor visitor) {

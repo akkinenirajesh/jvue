@@ -6,7 +6,6 @@ import java.util.List;
 import com.j2js.dom.VariableDeclaration;
 import com.j2js.ext.ExtChain;
 import com.j2js.ext.ExtInvocation;
-import com.j2js.ext.ExtRegistry;
 import com.j2js.ts.VisitorInput;
 
 public class FieldsVisit implements ExtInvocation<VisitorInput<List<VariableDeclaration>>> {
@@ -14,7 +13,7 @@ public class FieldsVisit implements ExtInvocation<VisitorInput<List<VariableDecl
 	@Override
 	public void invoke(PrintStream ps, VisitorInput<List<VariableDeclaration>> input, ExtChain ch) {
 		input.getInput().stream().filter(m -> !m.getName().startsWith("$SWITCH_TABLE$"))
-				.forEach(m -> ExtRegistry.get().invoke("field.visit", ps, new VisitorInput<>(m, input.getGenerator())));
+				.forEach(m -> ch.invoke("field.visit", ps, new VisitorInput<>(m, input.getGenerator())));
 		ch.next(ps, input);
 	}
 

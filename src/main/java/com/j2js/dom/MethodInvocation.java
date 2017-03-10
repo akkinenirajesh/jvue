@@ -30,11 +30,6 @@ public class MethodInvocation extends Expression {
 		methodDecl = theMethodDecl;
 	}
 
-	public MethodInvocation(MethodDeclaration theMethodDecl, MethodBinding theMethodBinding) {
-		methodDecl = theMethodDecl;
-		setMethodBinding(theMethodBinding);
-	}
-
 	public Type getTypeBinding() {
 		if (methodBinding == null)
 			return super.getTypeBinding();
@@ -126,8 +121,8 @@ public class MethodInvocation extends Expression {
 		return methodBinding;
 	}
 
-	public void setMethodBinding(MethodBinding theMethodBinding) {
+	public void setMethodBinding(Project project, MethodBinding theMethodBinding) {
 		methodBinding = theMethodBinding;
-		Project.getSingleton().addReference(methodDecl, this);
+		project.addReference(methodDecl, this);
 	}
 }

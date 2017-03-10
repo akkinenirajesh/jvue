@@ -8,8 +8,6 @@ import java.util.List;
 import com.j2js.assembly.Project;
 import com.j2js.ext.ExtChain;
 import com.j2js.ext.ExtInvocation;
-import com.j2js.ext.ExtRegistry;
-import com.j2js.ext.Tuple;
 import com.j2js.ts.MethodContext;
 import com.j2js.ts.TypeContext;
 
@@ -18,7 +16,7 @@ public class EnumDeclaration implements ExtInvocation<TypeContext> {
 	@Override
 	public void invoke(PrintStream ps, TypeContext input, ExtChain ch) {
 
-		ExtRegistry.get().invoke("class.name", ps, input.getType());
+		ch.invoke("class.name", ps, input.getType());
 
 		ps.println(" {");
 
@@ -27,10 +25,11 @@ public class EnumDeclaration implements ExtInvocation<TypeContext> {
 		input.getStaticMethods().remove("values");
 		input.getStaticMethods().remove("<clinit>");
 
-		ExtRegistry.get().invoke("class.body", ps, input);
-
-		MethodContext context = prepareMethod(input);
-		ExtRegistry.get().invoke("method", ps, new Tuple<String, MethodContext>("values", context));
+		MethodContext context = prepareMethod(ch.getProject(), input);
+		input.getStaticMethods().put("values", context.getList());
+		// ExtRegistry.get().invoke("method", ps, new Tuple<String,
+		// MethodContext>("values", context));
+		ch.invoke("class.body", ps, input);
 
 		ps.print("}");
 
@@ -38,11 +37,10 @@ public class EnumDeclaration implements ExtInvocation<TypeContext> {
 
 	}
 
-	private MethodContext prepareMethod(TypeContext input) {
+	private MethodContext prepareMethod(Project project, TypeContext input) {
 		String enums;
 		try {
-			Class<?> cls = Project.getSingleton().fileManager.getClassLoader()
-					.loadClass(input.getType().getClassName());
+			Class<?> cls = project.fileManager.getClassLoader().loadClass(input.getType().getClassName());
 			StringBuilder b = new StringBuilder("[");
 			Enum<?>[] enumConstants = (Enum<?>[]) cls.getEnumConstants();
 			if (enumConstants.length > 1) {

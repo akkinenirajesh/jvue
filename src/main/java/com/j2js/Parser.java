@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.bcel.classfile.AnnotationEntry;
-import org.apache.bcel.classfile.Attribute;
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.ConstantPool;
 import org.apache.bcel.classfile.Field;
@@ -47,7 +46,10 @@ public class Parser {
 
 	private ClassUnit fileUnit;
 
-	public Parser(ClassUnit theFileUnit) {
+	private Project project;
+
+	public Parser(Project project, ClassUnit theFileUnit) {
+		this.project = project;
 		fileUnit = theFileUnit;
 		try {
 			ClassParser cp = new ClassParser(fileUnit.getClassFile().openInputStream(), fileUnit.getName());
@@ -67,7 +69,7 @@ public class Parser {
 		org.apache.bcel.classfile.Method[] bcelMethods = jc.getMethods();
 
 		ObjectType type = new ObjectType(jc.getClassName());
-		TypeDeclaration typeDecl = new TypeDeclaration(type, jc.getAccessFlags());
+		TypeDeclaration typeDecl = new TypeDeclaration(type, jc.getAccessFlags(), jc.isEnum());
 		typeDecl.setAnnotations(jc.getAnnotationEntries());
 		fileUnit.isInterface = Modifier.isInterface(typeDecl.getAccess());
 
@@ -78,7 +80,7 @@ public class Parser {
 			// if (!Modifier.isInterface(typeDecl.getAccess())) {
 			ObjectType superType = new ObjectType(jc.getSuperclassName());
 			typeDecl.setSuperType(superType);
-			ClassUnit superUnit = Project.getSingleton().getOrCreateClassUnit(superType.getClassName());
+			ClassUnit superUnit = project.getOrCreateClassUnit(superType.getClassName());
 			fileUnit.setSuperUnit(superUnit);
 			// }
 
@@ -86,7 +88,7 @@ public class Parser {
 			String[] interfaceNames = jc.getInterfaceNames();
 			for (int i = 0; i < interfaceNames.length; i++) {
 				ObjectType interfaceType = new ObjectType(interfaceNames[i]);
-				ClassUnit interfaceUnit = Project.getSingleton().getOrCreateClassUnit(interfaceType.getClassName());
+				ClassUnit interfaceUnit = project.getOrCreateClassUnit(interfaceType.getClassName());
 				fileUnit.addInterface(interfaceUnit);
 			}
 		}
@@ -99,7 +101,7 @@ public class Parser {
 			variableDecl.setModifiers(field.getModifiers());
 			variableDecl.setType(field.getType());
 			variableDecl.setAnnotations(field.getAnnotationEntries());
-			typeDecl.addField(variableDecl);
+			typeDecl.addField(project, variableDecl);
 		}
 
 		List<Tuple<MethodDeclaration, Method>> needToParse = new ArrayList<>();
@@ -115,14 +117,15 @@ public class Parser {
 
 			MethodBinding binding = MethodBinding.lookup(jc.getClassName(), method.getName(), method.getSignature());
 
-			if (J2JSSettings.getSingleEntryPoint() != null) {
-				Signature signature = Project.getSingleton().getSignature(binding.toString());
-				String singleSignature = J2JSSettings.getSingleEntryPoint();
+			if (project.getSettings().getSingleEntryPoint() != null) {
+				Signature signature = project.getSignature(binding.toString());
+				String singleSignature = project.getSettings().getSingleEntryPoint();
 				if (!signature.toString().equals(singleSignature))
 					continue;
 			}
 
-			MethodDeclaration methodDecl = new MethodDeclaration(binding, method.getAccessFlags(), method.getCode());
+			MethodDeclaration methodDecl = new MethodDeclaration(project, binding, method.getAccessFlags(),
+					method.getCode());
 			methodDecl.setAnnotations(method.getAnnotationEntries());
 			typeDecl.addMethod(methodDecl);
 			needToParse.add(new Tuple<MethodDeclaration, Method>(methodDecl, method));
@@ -160,7 +163,7 @@ public class Parser {
 			return;
 
 		Log.getLogger().debug("Parsing " + methodDecl.toString());
-		Pass1 pass1 = new Pass1(jc);
+		Pass1 pass1 = new Pass1(project, jc);
 
 		try {
 			pass1.parse(typeDecl, method, methodDecl);
@@ -172,11 +175,12 @@ public class Parser {
 				node = Pass1.getCurrentNode();
 			}
 
-			if (J2JSSettings.failOnError) {
+			if (project.getSettings().failOnError) {
+				project.getSettings().errorCount++;
 				throw Utils.generateException(ex, methodDecl, node);
 			} else {
 				String msg = Utils.generateExceptionMessage(methodDecl, node);
-				J2JSSettings.errorCount++;
+				project.getSettings().errorCount++;
 				Log.getLogger().error(msg + "\n" + Utils.stackTraceToString(ex));
 			}
 
@@ -184,7 +188,8 @@ public class Parser {
 			ThrowStatement throwStmt = new ThrowStatement();
 			MethodBinding binding = MethodBinding.lookup("java.lang.RuntimeException", "<init>",
 					"(java/lang/String)V;");
-			ClassInstanceCreation cic = new ClassInstanceCreation(methodDecl, binding);
+			ClassInstanceCreation cic = new ClassInstanceCreation(methodDecl);
+			cic.setMethodBinding(project, binding);
 			cic.addArgument(new StringLiteral("Unresolved decompilation problem"));
 			throwStmt.setExpression(cic);
 			body.appendChild(throwStmt);
@@ -193,7 +198,7 @@ public class Parser {
 		}
 
 		// Remove from body last expressionless return statement.
-		if (J2JSSettings.optimize && methodDecl.getBody().getLastChild() instanceof ReturnStatement) {
+		if (project.getSettings().optimize && methodDecl.getBody().getLastChild() instanceof ReturnStatement) {
 			ReturnStatement ret = (ReturnStatement) methodDecl.getBody().getLastChild();
 			if (ret.getExpression() == null) {
 				methodDecl.getBody().removeChild(ret);

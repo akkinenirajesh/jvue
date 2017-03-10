@@ -1,6 +1,5 @@
 package com.j2js.assembly;
 
-import com.j2js.J2JSSettings;
 import com.j2js.Log;
 import com.j2js.Parser;
 import com.j2js.dom.TypeDeclaration;
@@ -29,12 +28,12 @@ public class TypeResolver implements TypeVisitor {
 			clazz.clear();
 			try {
 				compile(clazz);
-				J2JSSettings.compileCount++;
+				project.getSettings().compileCount++;
 			} catch (RuntimeException ex) {
-				J2JSSettings.errorCount++;
+				project.getSettings().errorCount++;
 				logger.error(ex.toString());
 				// ex.printStackTrace();
-				if (J2JSSettings.failOnError) {
+				if (project.getSettings().failOnError) {
 					throw ex;
 				}
 			}
@@ -70,7 +69,7 @@ public class TypeResolver implements TypeVisitor {
 	}
 
 	private TypeDeclaration parse(ClassUnit classUnit) {
-		Parser parser = new Parser(classUnit);
+		Parser parser = new Parser(project, classUnit);
 		TypeDeclaration typeDecl = parser.parse();
 
 		return typeDecl;

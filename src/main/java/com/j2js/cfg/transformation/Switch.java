@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.apache.bcel.generic.Type;
 
-import com.j2js.assembly.Project;
 import com.j2js.cfg.Edge;
 import com.j2js.cfg.Node;
 import com.j2js.cfg.SwitchEdge;
@@ -26,6 +25,9 @@ public class Switch extends Transformation {
 
 	private List<Node> caseGroups = new ArrayList<Node>();
 	private List<List<NumberLiteral>> caseGroupExpressions = new ArrayList<List<NumberLiteral>>();
+
+	public Switch() {
+	}
 
 	public boolean applies_() {
 		return header.isSwitchHeader;
@@ -115,7 +117,7 @@ public class Switch extends Transformation {
 
 	private Class<?> getEnumClass(String type) {
 		try {
-			return Project.getSingleton().fileManager.getClassLoader().loadClass(type);
+			return project.fileManager.getClassLoader().loadClass(type);
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 			return null;

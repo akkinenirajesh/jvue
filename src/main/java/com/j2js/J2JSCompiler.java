@@ -100,6 +100,7 @@ public class J2JSCompiler {
 		// addClasspathElements("libs/j2js-jre.jar;libs/j2js-agent.jar");
 		addClasspathElements("libs/j4ts.jar;libs/jsweet-core.jar");
 		setBasedir(new File("."));
+
 	}
 
 	public void execute() throws Exception {
@@ -143,18 +144,17 @@ public class J2JSCompiler {
 
 		logger.info("Creating assembly " + assembly.getTargetLocation());
 
-		fileManager = new FileManager(classpath, classLoader);
 		Project project = Project.createSingleton(getCacheFile());
-		assembly.setProject(project);
+		fileManager = new FileManager(project, classpath, classLoader);
 		generator = createGenerator(project);
 		project.generator = generator;
 		project.fileManager = fileManager;
-		J2JSSettings.errorCount = 0;
+		project.getSettings().errorCount = 0;
 
 		assembly.addEntryPoint(assembly.getEntryPointClassName() + "#main(java.lang.String[])void");
 
 		for (String memberSignature : assembly.entryPoints) {
-			assembly.taint(memberSignature);
+			assembly.taint(project, memberSignature);
 		}
 
 		long startTime = System.currentTimeMillis();
@@ -169,14 +169,14 @@ public class J2JSCompiler {
 		// }
 
 		if (getSingleEntryPoint() != null) {
-			assembly.processSingle(project.getSignature(getSingleEntryPoint()));
+			assembly.processSingle(project, project.getSignature(getSingleEntryPoint()));
 		} else {
-			assembly.processTainted();
+			assembly.processTainted(project);
 		}
 
 		int methodCount;
 		try {
-			methodCount = assembly.createAssembly();
+			methodCount = assembly.createAssembly(project);
 
 			if (getCacheFile() != null) {
 				Project.write(this);
@@ -185,12 +185,12 @@ public class J2JSCompiler {
 			throw new Exception("Error while creating assembly", e);
 		}
 
-		logger.info(timesName("Compiled|Compiled", J2JSSettings.compileCount, "class|classes") + ", "
+		logger.info(timesName("Compiled|Compiled", project.getSettings().compileCount, "class|classes") + ", "
 				+ timesName("packed|packed", methodCount, "method|methods") + ".");
 		logger.info("Execution time was " + (System.currentTimeMillis() - startTime) + " millis.");
 
-		if (J2JSSettings.errorCount > 0) {
-			logger.error("There " + timesName("was|were", J2JSSettings.errorCount, "error|errors") + ".");
+		if (project.getSettings().errorCount > 0) {
+			logger.error("There " + timesName("was|were", project.getSettings().errorCount, "error|errors") + ".");
 		}
 	}
 

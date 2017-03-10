@@ -12,7 +12,7 @@ public class EnumImports implements ExtInvocation<Set<String>> {
 
 	@Override
 	public void invoke(PrintStream ps, Set<String> input, ExtChain ch) {
-		Project p = Project.getSingleton();
+		Project p = ch.getProject();
 		input = input.stream().filter(t -> !p.isEnum(t)).collect(Collectors.toSet());
 		ch.next(ps, input);
 	}

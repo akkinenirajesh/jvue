@@ -35,7 +35,7 @@ import com.j2js.dom.ThisExpression;
 import com.j2js.dom.ThrowStatement;
 import com.j2js.dom.TypeDeclaration;
 import com.j2js.dom.VariableDeclaration;
-import com.j2js.ext.ExtRegistry;
+import com.j2js.ext.ExtInvoker;
 import com.j2js.ext.Tuple;
 import com.j2js.visitors.JavaScriptGenerator;
 
@@ -44,12 +44,17 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	private J2TSCompiler compiler;
 
 	private TypeContext context;
-	private PkgContext project;
+	private PkgContext pkg;
+	private ExtInvoker inv;
 
-	public TypeScriptGenerator(J2TSCompiler compiler) {
-		super(Project.getSingleton());
+	public TypeScriptGenerator(Project project, J2TSCompiler compiler) {
+		super(project);
 		this.compiler = compiler;
-		this.project = new PkgContext(compiler);
+		this.pkg = new PkgContext(compiler);
+	}
+
+	public void setExtInvoker(ExtInvoker inv) {
+		this.inv = inv;
 	}
 
 	public TypeContext getContext() {
@@ -57,25 +62,27 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	}
 
 	public void writeToFile() {
-		if (J2JSSettings.singleFile) {
-			File file = new File(compiler.getBasedir(), "out." + J2JSSettings.ext);
+		J2JSSettings settings = project.getSettings();
+		if (settings.singleFile) {
+			File file = new File(settings.getBasedir(), settings.fileName + "." + settings.ext);
 			try {
 				file.createNewFile();
 				PrintStream ps = new PrintStream(new FileOutputStream(file));
-				ExtRegistry.get().invoke("file.create", ps, null);
-				project.write(ps);
+				inv.invoke("file.create", ps, null);
+				pkg.write(inv, ps);
+				inv.invoke("file.end", ps, null);
 				ps.flush();
 				ps.close();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		} else {
-			project.write(compiler.getBasedir());
+			pkg.write(inv, settings.getBasedir());
 		}
 	}
 
 	public void setStream(TypeDeclaration type) {
-		this.context = project.get(type);
+		this.context = pkg.get(type);
 	}
 
 	public void visit(TypeDeclaration type, boolean isPartial) {
@@ -88,13 +95,13 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 				context.addImports(type.getSuperType());
 			}
 
-			if (!context.isEnum()) {
+			if (!type.isEnum()) {
 				setOutputStream(context.getFieldsStream());
-				ExtRegistry.get().invoke("fields.visit", context.getFieldsStream(),
+				inv.invoke("fields.visit", context.getFieldsStream(),
 						new VisitorInput<>(new ArrayList<>(type.getFields()), this));
 			}
 			if (!isPartial) {
-				ExtRegistry.get().invoke("methods.visit", getOutputStream(),
+				inv.invoke("methods.visit", getOutputStream(),
 						new VisitorInput<>(Arrays.asList(type.getMethods()), this));
 			}
 		} catch (Throwable e) {
@@ -183,7 +190,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	}
 
 	public void visit(MethodInvocation invocation) {
-		ExtRegistry.get().invoke("methodinvocation.visit", getOutputStream(), new VisitorInput<>(invocation, this));
+		inv.invoke("methodinvocation.visit", getOutputStream(), new VisitorInput<>(invocation, this));
 	}
 
 	public void methodInvocation(MethodInvocation invocation) {
@@ -198,12 +205,12 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 			if (expression != null) {
 				expression.visit(this);
 			} else {
-				ExtRegistry.get().invoke("super", getOutputStream(), null);
+				inv.invoke("super", getOutputStream(), null);
 			}
 
 			if (methodBinding.isConstructor() && !isAnonymousClass(invocation.getMethodDecl().toString())) {
 				String simpleName = methodBinding.getDeclaringClass().getClassName();
-				print(".constructor").print(simpleName).print("0");
+				print(".constructor").print(TSHelper.getSimpleName(simpleName)).print("0");
 			}
 
 		} else if (expression != null) {
@@ -230,7 +237,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 			return;
 		} else if (expression == null) {
 			context.addImports(methodBinding.getDeclaringClass());
-			if (Project.getSingleton().isEnum(methodBinding.getDeclaringClass())) {
+			if (project.isEnum(methodBinding.getDeclaringClass())) {
 				compiler.addClass(methodBinding.getDeclaringClass().getClassName());
 			}
 			// Static invocation
@@ -240,7 +247,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 			if (invocation.isSpecial) {
 				print(".");
 			}
-			name = Project.getSingleton().getMethodReplcerName(methodBinding.getDeclaringClass().getClassName(),
+			name = project.getMethodReplcerName(methodBinding.getDeclaringClass().getClassName(),
 					methodBinding.getName());
 			print(name);
 		}
@@ -287,7 +294,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 		}
 
 		if (decl.getLocation() == VariableDeclaration.NON_LOCAL) {
-			ExtRegistry.get().invoke("class.field.decl", getOutputStream(),
+			inv.invoke("class.field.decl", getOutputStream(),
 					new Tuple<VariableDeclaration, TypeContext>(decl, context));
 			return;
 		} else {
@@ -377,12 +384,17 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	public void visit(FieldAccess fr) {
 		ASTNode expression = fr.getExpression();
 		if (expression == null) {
-			if (Project.getSingleton().isEnum(fr.getType())) {
+			if (project.isEnum(fr.getType())) {
 				print("'").print(fr.getName()).print("'");
 				return;
 			}
-			context.addImports(fr.getType());
-			print(fr.getType().getClassName());
+			String className = fr.getType().getClassName();
+			if (context.getType().getClassName().equals(className)) {
+				print(TSHelper.getSimpleName(className));
+			} else {
+				context.addImports(fr.getType());
+				print(className);
+			}
 		} else {
 			expression.visit(this);
 		}
@@ -413,7 +425,7 @@ public class TypeScriptGenerator extends JavaScriptGenerator {
 	}
 
 	public void visit(ThisExpression reference) {
-		ExtRegistry.get().invoke("this", getOutputStream(), null);
+		inv.invoke("this", getOutputStream(), null);
 	}
 
 	public void visit(ThrowStatement node) {

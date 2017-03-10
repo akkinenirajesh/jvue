@@ -112,7 +112,7 @@ public class Pass1 {
 
 	private List<TryStatement> tryStatements = new ArrayList<TryStatement>();
 
-	private ControlFlowGraph graph = new ControlFlowGraph(tryStatements);
+	private ControlFlowGraph graph;
 
 	// Not used anymore.
 	private int depth;
@@ -130,12 +130,15 @@ public class Pass1 {
 	 */
 	private boolean wide = false;
 	private TypeDeclaration typeDecl;
+	private Project project;
 
 	public static ASTNode getCurrentNode() {
 		return currentNode;
 	}
 
-	public Pass1(JavaClass jc) {
+	public Pass1(Project project, JavaClass jc) {
+		graph = new ControlFlowGraph(project, tryStatements);
+		this.project = project;
 		constantPool = jc.getConstantPool();
 		Attribute[] attributes = jc.getAttributes();
 		for (Attribute a : attributes) {
@@ -320,7 +323,7 @@ public class Pass1 {
 			Optimizer optimizer = new Optimizer(methodDecl, tempDecls);
 			optimizer.optimize();
 		} catch (Error e) {
-			J2JSSettings.errorCount++;
+			project.getSettings().errorCount++;
 			if (logger.isDebugEnabled()) {
 				logger.debug("In Expression Optimizer:\n" + e + "\n" + Utils.stackTraceToString(e));
 			} else {
@@ -329,7 +332,7 @@ public class Pass1 {
 		}
 
 		Block block;
-		if (J2JSSettings.reductionLevel == 0) {
+		if (project.getSettings().reductionLevel == 0) {
 			block = graph.reduceDumb();
 		} else {
 			block = graph.reduce();
@@ -1107,7 +1110,8 @@ public class Pass1 {
 			// Create a new array with components of type componentType.
 			List<ASTNode> dimensions = new ArrayList<ASTNode>();
 			dimensions.add(stack.pop());
-			ArrayCreation ac = new ArrayCreation(methodDecl, new ObjectType("[" + componentSignature), dimensions);
+			ArrayCreation ac = new ArrayCreation(project, methodDecl, new ObjectType("[" + componentSignature),
+					dimensions);
 			instruction = ac;
 			break;
 		}
@@ -1131,7 +1135,7 @@ public class Pass1 {
 			// Create a new array with components of type componentType.
 			List<ASTNode> dimensions = new ArrayList<ASTNode>();
 			dimensions.add(stack.pop());
-			ArrayCreation ac = new ArrayCreation(methodDecl, arrayType, dimensions);
+			ArrayCreation ac = new ArrayCreation(project, methodDecl, arrayType, dimensions);
 			instruction = ac;
 			break;
 		}
@@ -1158,7 +1162,7 @@ public class Pass1 {
 				// Add dimension in reverse order.
 				dimensions.add(0, stack.pop());
 			}
-			ArrayCreation ac = new ArrayCreation(methodDecl, arrayType, dimensions);
+			ArrayCreation ac = new ArrayCreation(project, methodDecl, arrayType, dimensions);
 			instruction = ac;
 			break;
 		}
@@ -1179,7 +1183,8 @@ public class Pass1 {
 			fa.setName(getFieldName(fieldRef));
 			fa.setTypeBinding(getFieldType(fieldRef));
 			fa.setType(new ObjectType(fieldRef.getClass(constantPool)));
-			fa.initialize(methodDecl);
+			fa.initialize(project, methodDecl);
+			project.addReference(methodDecl, fa);
 
 			if (opcode == Const.PUTFIELD) {
 				fa.setExpression(stack.pop());
@@ -1203,7 +1208,7 @@ public class Pass1 {
 			fa.setName(getFieldName(fieldRef));
 			fa.setTypeBinding(getFieldType(fieldRef));
 			fa.setExpression(ex);
-			fa.initialize(methodDecl);
+			fa.initialize(project, methodDecl);
 			instruction = fa;
 			break;
 		}
@@ -1217,7 +1222,7 @@ public class Pass1 {
 			FieldAccess fa = new FieldRead();
 			fa.setType(new ObjectType(fieldRef.getClass(constantPool)));
 			fa.setName(getFieldName(fieldRef));
-			fa.initialize(methodDecl);
+			fa.initialize(project, methodDecl);
 			fa.setTypeBinding(getFieldType(fieldRef));
 			// Name e = new Name(fieldRef.getClass(constantPool));
 			// fa.setExpression(e);
@@ -2103,8 +2108,7 @@ public class Pass1 {
 				constant = constantPool.getConstant(k, Constants.CONSTANT_Utf8);
 				instruction = new StringLiteral(((ConstantUtf8) constant).getBytes());
 			} else if (constant.getTag() == Constants.CONSTANT_Class) {
-				Signature signature = Project.getSingleton()
-						.getSignature(((ConstantClass) constant).getBytes(constantPool));
+				Signature signature = project.getSignature(((ConstantClass) constant).getBytes(constantPool));
 				instruction = new ClassLiteral(signature);
 			} else {
 				throw new RuntimeException("Cannot handle constant tag: " + constant.getTag());
@@ -2200,8 +2204,8 @@ public class Pass1 {
 			// Operand stack: ..., arg1(), ...(), argN() -> ...
 			int index = bytes.readUnsignedShort();
 			MethodBinding methodBinding = MethodBinding.lookup(index, constantPool);
-			MethodInvocation invocation = new MethodInvocation(methodDecl, methodBinding);
-
+			MethodInvocation invocation = new MethodInvocation(methodDecl);
+			invocation.setMethodBinding(project, methodBinding);
 			// Processor.getLogger().finer(method.getName() + "->" +
 			// invocation.binding);
 
@@ -2336,12 +2340,12 @@ public class Pass1 {
 				.getConstant(bootstrapMethod.getBootstrapArguments()[1]);
 		int referenceKind = staticMethod.getReferenceKind();// prototype
 		methodBinding = MethodBinding.lookup(staticMethod.getReferenceIndex(), constantPool);
-		MethodInvocation inv = new MethodInvocation(methodDecl, methodBinding);
-
+		MethodInvocation inv = new MethodInvocation(methodDecl);
+		inv.setMethodBinding(project, methodBinding);
 		ConstantNameAndType nameAndType = (ConstantNameAndType) constantPool
 				.getConstant(methodRef.getNameAndTypeIndex(), Constants.CONSTANT_NameAndType);
 		String signature = nameAndType.getSignature(constantPool);
-		int lambdaArgs = Project.getSingleton().getLambdaArguments(signature);
+		int lambdaArgs = project.getLambdaArguments(signature);
 		int bindingArgs = methodBinding.getParameterTypes().length;
 		int fromStackArgs = bindingArgs - lambdaArgs;
 
@@ -2414,11 +2418,11 @@ public class Pass1 {
 
 	private Signature getTypeFromConstant(Constant constant) {
 		if (constant instanceof ConstantMethodType) {
-			return Project.getSingleton().getSignature("java.lang.invoke.MethodType");
+			return project.getSignature("java.lang.invoke.MethodType");
 		}
 
 		if (constant instanceof ConstantMethodHandle) {
-			return Project.getSingleton().getSignature("java.lang.invoke.MethodHandle");
+			return project.getSignature("java.lang.invoke.MethodHandle");
 		}
 		// if (cpe instanceof ConstantPoolEntryDouble) {
 		// return TypedLiteral.getDouble(((ConstantPoolEntryDouble)

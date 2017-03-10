@@ -24,15 +24,25 @@ public class TypeDeclaration extends ASTNode {
 	// private MethodDeclaration initializer;
 	private List<VariableDeclaration> fields = new ArrayList<VariableDeclaration>();
 	private int accessFlags;
+	private boolean isEnum;
 	// private String superClassName;
 
-	public TypeDeclaration(ObjectType theType, int theAccessFlags) {
+	public TypeDeclaration(ObjectType theType, int theAccessFlags, boolean isEnum) {
 		type = theType;
 		accessFlags = theAccessFlags;
+		this.isEnum = isEnum;
 	}
 
 	public void visit(AbstractVisitor visitor) {
 		visitor.visit(this);
+	}
+
+	public void setEnum(boolean isEnum) {
+		this.isEnum = isEnum;
+	}
+
+	public boolean isEnum() {
+		return isEnum;
 	}
 
 	/**
@@ -99,9 +109,9 @@ public class TypeDeclaration extends ASTNode {
 	 * @param fields
 	 *            The fields to set.
 	 */
-	public void addField(VariableDeclaration field) {
+	public void addField(Project project, VariableDeclaration field) {
 		fields.add(field);
-		Project.getSingleton().getOrCreateFieldUnit(type, field.getName());
+		project.getOrCreateFieldUnit(type, field.getName());
 	}
 
 	/**

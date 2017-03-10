@@ -21,8 +21,8 @@ public abstract class MemberUnit extends Unit {
 		return declaringClass;
 	}
 
-	public Signature getAbsoluteSignature() {
-		Signature s = Project.getSingleton().getSignature(declaringClass.toString(), getSignature().toString());
+	public Signature getAbsoluteSignature(Project project) {
+		Signature s = project.getSignature(declaringClass.toString(), getSignature().toString());
 		return s;
 	}
 

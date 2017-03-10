@@ -1,37 +1,43 @@
 package com.j2js;
 
+import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Predicate;
 
 public class J2JSSettings {
 
-	public static int reductionLevel = 5;
+	public int reductionLevel = 5;
 
-	public static boolean optimize = true;
+	public boolean optimize = true;
 
-	public static boolean failOnError = false;
+	public boolean failOnError = false;
 
-	public static boolean compression = false;
+	public boolean compression = false;
 
-	public static boolean generateLineNumbers;
+	public boolean generateLineNumbers;
 
-	public static int compileCount;
+	public int compileCount;
 
-	public static int errorCount;
+	public int errorCount;
 
-	public static boolean singleFile = false;
+	public boolean singleFile = false;
 
-	public static String ext = "ts";
+	private File basedir;
 
-	public static Set<String> denyClasses = new HashSet<>();
-	public static Set<String> denyPkgs = new HashSet<>();
+	public String fileName = "out";
 
-	public static Predicate<String> allowClass = s -> !denyClasses.contains(s.split("\\$")[0]);
+	public String ext = "ts";
 
-	static {
+	public Set<String> denyClasses = new HashSet<>();
+	public Set<String> denyPkgs = new HashSet<>();
+
+	public Predicate<String> allowClass = s -> !denyClasses.contains(s.split("\\$")[0]);
+
+	public J2JSSettings() {
+		this.basedir = new File(".");
 		addFilter(s -> {
-			for (String p : J2JSSettings.denyPkgs) {
+			for (String p : denyPkgs) {
 				if (s.startsWith(p)) {
 					return false;
 				}
@@ -40,11 +46,22 @@ public class J2JSSettings {
 		});
 	}
 
-	public static String getSingleEntryPoint() {
+	public void setBasedir(File basedir) {
+		if (!basedir.exists()) {
+			basedir.mkdirs();
+		}
+		this.basedir = basedir;
+	}
+
+	public File getBasedir() {
+		return basedir;
+	}
+
+	public String getSingleEntryPoint() {
 		return null;
 	}
 
-	public static void addFilter(Predicate<String> filter) {
+	public void addFilter(Predicate<String> filter) {
 		allowClass = allowClass.and(filter);
 	}
 }

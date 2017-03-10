@@ -16,8 +16,8 @@ public class ClassInstanceCreation extends MethodInvocation {
 		type = theType;
 	}
 
-	public ClassInstanceCreation(MethodDeclaration methodDecl, MethodBinding methodBinding) {
-		super(methodDecl, methodBinding);
+	public ClassInstanceCreation(MethodDeclaration methodDecl) {
+		super(methodDecl);
 	}
 
 	public void visit(AbstractVisitor visitor) {

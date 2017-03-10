@@ -99,6 +99,7 @@ public class JavaScriptGenerator extends Generator {
 
 	/** Creates a new instance of Generator */
 	public JavaScriptGenerator(Project theProject) {
+		super(theProject.getSettings().compression);
 		project = theProject;
 		setOutputStream(new PrintStream(baStream));
 	}
@@ -140,13 +141,13 @@ public class JavaScriptGenerator extends Generator {
 		String superType = null;
 		// TODO Interface: Interfaces must not have supertype.
 		if (theTypeDecl.getSuperType() != null && !Modifier.isInterface(theTypeDecl.getAccess())) {
-			superType = Project.getSingleton().getSignature(theTypeDecl.getSuperType().getClassName()).getCommentedId();
+			superType = project.getSignature(theTypeDecl.getSuperType().getClassName()).getCommentedId();
 		}
 
 		print("var _T = j2js.");
 		print(DEFINECLASS);
 		print("(");
-		print(Project.getSingleton().getSignature(theTypeDecl.getClassName()).getCommentedId());
+		print(project.getSignature(theTypeDecl.getClassName()).getCommentedId());
 		println(", _C, " + superType + ");");
 
 		// Generate static initializer.
@@ -186,6 +187,7 @@ public class JavaScriptGenerator extends Generator {
 			try {
 				method.visit(this);
 			} catch (RuntimeException ex) {
+				project.getSettings().errorCount++;
 				throw Utils.generateException(ex, method, currentNode);
 			}
 		}
@@ -215,12 +217,12 @@ public class JavaScriptGenerator extends Generator {
 					"Method " + method + " with access " + method.getAccess() + " may not have empty body");
 		}
 
-		if (!J2JSSettings.compression) {
-			println("/* " + unit.getAbsoluteSignature() + " */");
+		if (!compression) {
+			println("/* " + unit.getAbsoluteSignature(project) + " */");
 		}
 
 		String closingString;
-		Signature signature = Project.getSingleton().getSignature(methodBinding.toString()).relative();
+		Signature signature = project.getSignature(methodBinding.toString()).relative(project);
 
 		if (false && typeDecl.getClassName().equals("java.lang.String") && method.isInstanceConstructor()) {
 			// All String constructors are converted to methods returning the
@@ -391,7 +393,7 @@ public class JavaScriptGenerator extends Generator {
 		ASTNode node = block.getFirstChild();
 		while (node != null) {
 			currentNode = node;
-			if (J2JSSettings.generateLineNumbers) {
+			if (project.getSettings().generateLineNumbers) {
 				int lineNumber = currentMethodDeclaration.getLineNumberCursor().getAndMarkLineNumber(node);
 				if (lineNumber != -1) {
 					print(prefix + "ln=" + lineNumber + ";\n");
@@ -473,7 +475,7 @@ public class JavaScriptGenerator extends Generator {
 		print(prefix + "isInstanceof(");
 		node.getLeftOperand().visit(this);
 		print(", \"");
-		Signature signature = Project.getSingleton().getArraySignature(node.getRightOperand());
+		Signature signature = project.getArraySignature(node.getRightOperand());
 		print(signature.toString());
 		print("\")");
 	}
@@ -556,7 +558,8 @@ public class JavaScriptGenerator extends Generator {
 	public void visit(ClassLiteral literal) {
 		MethodBinding binding = MethodBinding.lookup("java.lang.Class", "forName",
 				"(Ljava/lang/String;)Ljava/lang/Class;");
-		MethodInvocation mi = new MethodInvocation(currentMethodDeclaration, binding);
+		MethodInvocation mi = new MethodInvocation(currentMethodDeclaration);
+		mi.setMethodBinding(project, binding);
 		mi.addArgument(new StringLiteral(literal.getSignature().toString()));
 		visit(mi);
 	}
@@ -638,10 +641,10 @@ public class JavaScriptGenerator extends Generator {
 
 	protected void generateArguments(MethodInvocation invocation) {
 		MethodBinding methodBinding = invocation.getMethodBinding();
-		Signature signature = Project.getSingleton().getSignature(methodBinding.getDeclaringClass().getClassName());
+		Signature signature = project.getSignature(methodBinding.getDeclaringClass().getClassName());
 		print(signature.getCommentedId());
 		print(", ");
-		signature = Project.getSingleton().getSignature(methodBinding.getRelativeSignature());
+		signature = project.getSignature(methodBinding.getRelativeSignature());
 		print(signature.getCommentedId());
 
 		print(", [");
@@ -686,7 +689,7 @@ public class JavaScriptGenerator extends Generator {
 				assert expression instanceof ClassInstanceCreation;
 			}
 
-			Signature signature = Project.getSingleton().getSignature(methodBinding.toString()).relative();
+			Signature signature = project.getSignature(methodBinding.toString()).relative(project);
 			print("j2js.StringInit" + signature.getId() + "(");
 			generateList(invocation.getArguments());
 			print(")");
@@ -818,7 +821,7 @@ public class JavaScriptGenerator extends Generator {
 		print(prefix);
 		print(NEWINSTANCE);
 		print("(");
-		print(Project.getSingleton().getSignature(((ObjectType) cic.getTypeBinding()).getClassName()).getCommentedId());
+		print(project.getSignature(((ObjectType) cic.getTypeBinding()).getClassName()).getCommentedId());
 
 		if (cic.getMethodBinding() != null) {
 			// We never get here!
@@ -847,7 +850,7 @@ public class JavaScriptGenerator extends Generator {
 			ac.getInitializer().visit(this);
 		} else {
 			print("j2js.newArray('");
-			Signature signature = Project.getSingleton().getArraySignature(ac.getTypeBinding());
+			Signature signature = project.getArraySignature(ac.getTypeBinding());
 			print(signature.toString());
 			print("', [");
 			for (int i = 0; i < ac.getDimensions().size(); i++) {
@@ -935,7 +938,7 @@ public class JavaScriptGenerator extends Generator {
 			// Static access.
 			print(prefix);
 			print(STATICFIELDREF);
-			print("(" + Project.getSingleton().getSignature(fr.getType().getClassName()).getCommentedId());
+			print("(" + project.getSignature(fr.getType().getClassName()).getCommentedId());
 			print(")");
 		} else if (expression instanceof ThisExpression) {
 			expression.visit(this);
