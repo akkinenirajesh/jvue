@@ -20882,3 +20882,817 @@ java.util.Comparators.NATURAL_$LI$();
 java.lang.Class.classes_$LI$();
 java.lang.Class.constructors_$LI$();
 //# sourceMappingURL=bundle.js.map
+
+(function (java) {
+    var util;
+    (function (util) {
+		var regex;
+        (function (regex) {			
+           var Pattern = (function () {
+        	    function Pattern() {
+				};				
+				Pattern.compile = function (other) {
+				};				
+				return Pattern;
+			}());
+			regex.Pattern = Pattern;
+    	})(regex = java.util.regex || (java.util.regex = {}));
+    })(util = java.util || (java.util = {}));
+})(java || (java = {}));
+
+(function (java) {
+    var math;
+    (function (math) {
+       var MathContext = (function () {
+    	   function MathContext() {
+    		    this.digits = 0, this.form = 0, this.lostDigits = !1, this.roundingMode = 0;
+    		    var t = this.DEFAULT_FORM,
+    		        o = this.DEFAULT_LOSTDIGITS,
+    		        e = this.DEFAULT_ROUNDINGMODE;
+    		    if (4 == MathContext.arguments.length) t = MathContext.arguments[1], o = MathContext.arguments[2], e = MathContext.arguments[3];
+    		    else if (3 == MathContext.arguments.length) t = MathContext.arguments[1], o = MathContext.arguments[2];
+    		    else if (2 == MathContext.arguments.length) t = MathContext.arguments[1];
+    		    else if (1 != MathContext.arguments.length) throw "MathContext(): " + MathContext.arguments.length + " arguments given; expected 1 to 4";
+    		    var n = MathContext.arguments[0];
+    		    if (n != this.DEFAULT_DIGITS) {
+    		        if (n < this.MIN_DIGITS) throw "MathContext(): Digits too small: " + n;
+    		        if (n > this.MAX_DIGITS) throw "MathContext(): Digits too large: " + n
+    		    }
+    		    if (t == this.SCIENTIFIC);
+    		    else if (t == this.ENGINEERING);
+    		    else if (t != this.PLAIN) throw "MathContext() Bad form value: " + t;
+    		    if (!this.isValidRound(e)) throw "MathContext(): Bad roundingMode value: " + e;
+    		    this.digits = n, this.form = t, this.lostDigits = o, this.roundingMode = e
+    		}
+
+    		function getDigits() {
+    		    return this.digits
+    		}
+
+    		function getForm() {
+    		    return this.form
+    		}
+
+    		function getLostDigits() {
+    		    return this.lostDigits
+    		}
+
+    		function getRoundingMode() {
+    		    return this.roundingMode
+    		}
+
+    		function toString() {
+    		    var t = null,
+    		        o = 0,
+    		        e = null;
+    		    t = this.form == this.SCIENTIFIC ? "SCIENTIFIC" : this.form == this.ENGINEERING ? "ENGINEERING" : "PLAIN";
+    		    var n = this.ROUNDS.length;
+    		    o = 0;
+    		    t: for (; n > 0; n--, o++)
+    		        if (this.roundingMode == this.ROUNDS[o]) {
+    		            e = this.ROUNDWORDS[o];
+    		            break t
+    		        }
+    		    return "digits=" + this.digits + " form=" + t + " lostDigits=" + (this.lostDigits ? "1" : "0") + " roundingMode=" + e
+    		}
+
+    		function isValidRound(t) {
+    		    var o = 0,
+    		        e = this.ROUNDS.length;
+    		    for (o = 0; e > 0; e--, o++)
+    		        if (t == this.ROUNDS[o]) return !0;
+    		    return !1
+    		}
+    		MathContext.prototype.getDigits = getDigits, MathContext.prototype.getForm = getForm, MathContext.prototype.getLostDigits = getLostDigits, MathContext.prototype.getRoundingMode = getRoundingMode, MathContext.prototype.toString = toString, MathContext.prototype.isValidRound = isValidRound, MathContext.PLAIN = MathContext.prototype.PLAIN = 0, MathContext.SCIENTIFIC = MathContext.prototype.SCIENTIFIC = 1, MathContext.ENGINEERING = MathContext.prototype.ENGINEERING = 2, MathContext.ROUND_CEILING = MathContext.prototype.ROUND_CEILING = 2, MathContext.ROUND_DOWN = MathContext.prototype.ROUND_DOWN = 1, MathContext.ROUND_FLOOR = MathContext.prototype.ROUND_FLOOR = 3, MathContext.ROUND_HALF_DOWN = MathContext.prototype.ROUND_HALF_DOWN = 5, MathContext.ROUND_HALF_EVEN = MathContext.prototype.ROUND_HALF_EVEN = 6, MathContext.ROUND_HALF_UP = MathContext.prototype.ROUND_HALF_UP = 4, MathContext.ROUND_UNNECESSARY = MathContext.prototype.ROUND_UNNECESSARY = 7, MathContext.ROUND_UP = MathContext.prototype.ROUND_UP = 0, MathContext.prototype.DEFAULT_FORM = MathContext.prototype.SCIENTIFIC, MathContext.prototype.DEFAULT_DIGITS = 9, MathContext.prototype.DEFAULT_LOSTDIGITS = !1, MathContext.prototype.DEFAULT_ROUNDINGMODE = MathContext.prototype.ROUND_HALF_UP, MathContext.prototype.MIN_DIGITS = 0, MathContext.prototype.MAX_DIGITS = 999999999, MathContext.prototype.ROUNDS = new Array(MathContext.prototype.ROUND_HALF_UP, MathContext.prototype.ROUND_UNNECESSARY, MathContext.prototype.ROUND_CEILING, MathContext.prototype.ROUND_DOWN, MathContext.prototype.ROUND_FLOOR, MathContext.prototype.ROUND_HALF_DOWN, MathContext.prototype.ROUND_HALF_EVEN, MathContext.prototype.ROUND_UP), MathContext.prototype.ROUNDWORDS = new Array("ROUND_HALF_UP", "ROUND_UNNECESSARY", "ROUND_CEILING", "ROUND_DOWN", "ROUND_FLOOR", "ROUND_HALF_DOWN", "ROUND_HALF_EVEN", "ROUND_UP"), MathContext.prototype.DEFAULT = new MathContext(MathContext.prototype.DEFAULT_DIGITS, MathContext.prototype.DEFAULT_FORM, MathContext.prototype.DEFAULT_LOSTDIGITS, MathContext.prototype.DEFAULT_ROUNDINGMODE);
+    		return MathContext;
+       }());
+       var BigDecimal = (function () {
+    	   function div(a, b) {
+    		    return (a - a % b) / b
+    		}
+
+    		function arraycopy(a, b, c, d, e) {
+    		    var f;
+    		    if (d > b)
+    		        for (f = e - 1; f >= 0; --f) c[f + d] = a[f + b];
+    		    else
+    		        for (f = 0; f < e; ++f) c[f + d] = a[f + b]
+    		}
+
+    		function createArrayWithZeros(a) {
+    		    var c, b = new Array(a);
+    		    for (c = 0; c < a; ++c) b[c] = 0;
+    		    return b
+    		}
+
+    		function BigDecimal() {
+    		    if (this.ind = 0, this.form = MathContext.prototype.PLAIN, this.mant = null, this.exp = 0, 0 != BigDecimal.arguments.length) {
+    		        var a, b, c;
+    		        1 == BigDecimal.arguments.length ? (a = BigDecimal.arguments[0], b = 0, c = a.length) : (a = BigDecimal.arguments[0], b = BigDecimal.arguments[1], c = BigDecimal.arguments[2]), "string" == typeof a && (a = a.split(""));
+    		        var d, e, f, g, h, i = 0,
+    		            j = 0,
+    		            k = !1,
+    		            l = 0,
+    		            m = 0,
+    		            n = 0,
+    		            o = 0,
+    		            p = 0,
+    		            q = 0;
+    		        c <= 0 && this.bad("BigDecimal(): ", a), this.ind = this.ispos, "-" == a[0] ? (c--, 0 == c && this.bad("BigDecimal(): ", a), this.ind = this.isneg, b++) : "+" == a[0] && (c--, 0 == c && this.bad("BigDecimal(): ", a), b++), d = !1, e = !1, f = 0, g = -1, h = -1;
+    		        var r = c;
+    		        i = b;
+    		        a: for (; r > 0; r--, i++)
+    		            if (j = a[i], j >= "0" && j <= "9") h = i, f++;
+    		            else
+    		        if ("." != j) {
+    		            if ("e" == j || "E" == j) {
+    		                i - b > c - 2 && this.bad("BigDecimal(): ", a), k = !1, "-" == a[i + 1] ? (k = !0, l = i + 2) : l = "+" == a[i + 1] ? i + 2 : i + 1, m = c - (l - b), (0 == m || m > 9) && this.bad("BigDecimal(): ", a);
+    		                var s = m;
+    		                for (n = l; s > 0; s--, n++) o = a[n], o < "0" && this.bad("BigDecimal(): ", a), o > "9" ? this.bad("BigDecimal(): ", a) : p = o - "0", this.exp = 10 * this.exp + p;
+    		                k && (this.exp = -this.exp), e = !0;
+    		                break a
+    		            }(j < "0" || j > "9") && this.bad("BigDecimal(): ", a), d = !0, h = i, f++
+    		        } else g >= 0 && this.bad("BigDecimal(): ", a), g = i - b;
+    		        0 == f && this.bad("BigDecimal(): ", a), g >= 0 && (this.exp = this.exp + g - f);
+    		        var t = h - 1;
+    		        i = b;
+    		        a: for (; i <= t; i++)
+    		            if (j = a[i], "0" == j) b++, g--, f--;
+    		            else {
+    		                if ("." != j) {
+    		                    if (j <= "9") break a;
+    		                    break a
+    		                }
+    		                b++, g--
+    		            }
+    		        if (this.mant = new Array(f), n = b, d) {
+    		            do {
+    		                var u = f;
+    		                for (i = 0; u > 0; u--, i++) i == g && n++, o = a[n], o <= "9" ? this.mant[i] = o - "0" : this.bad("BigDecimal(): ", a), n++
+    		            } while (!1)
+    		        } else
+    		            do {
+    		                var v = f;
+    		                for (i = 0; v > 0; v--, i++) i == g && n++, this.mant[i] = a[n] - "0", n++
+    		            } while (!1);
+    		        0 == this.mant[0] ? (this.ind = this.iszero, this.exp > 0 && (this.exp = 0), e && (this.mant = this.ZERO.mant, this.exp = 0)) : e && (this.form = MathContext.prototype.SCIENTIFIC, q = this.exp + this.mant.length - 1, (q < this.MinExp || q > this.MaxExp) && this.bad("BigDecimal(): ", a))
+    		    }
+    		}
+
+    		function abs() {
+    		    var a;
+    		    if (1 == abs.arguments.length) a = abs.arguments[0];
+    		    else {
+    		        if (0 != abs.arguments.length) throw "abs(): " + abs.arguments.length + " arguments given; expected 0 or 1";
+    		        a = this.plainMC
+    		    }
+    		    return this.ind == this.isneg ? this.negate(a) : this.plus(a)
+    		}
+
+    		function add() {
+    		    var a;
+    		    if (2 == add.arguments.length) a = add.arguments[1];
+    		    else {
+    		        if (1 != add.arguments.length) throw "add(): " + add.arguments.length + " arguments given; expected 1 or 2";
+    		        a = this.plainMC
+    		    }
+    		    var c, d, e, f, g, h, i, b = add.arguments[0],
+    		        j = 0,
+    		        k = 0,
+    		        l = 0,
+    		        m = null,
+    		        n = 0,
+    		        o = 0,
+    		        p = 0,
+    		        q = 0,
+    		        r = 0,
+    		        s = 0;
+    		    if (a.lostDigits && this.checkdigits(b, a.digits), c = this, 0 == c.ind && a.form != MathContext.prototype.PLAIN) return b.plus(a);
+    		    if (0 == b.ind && a.form != MathContext.prototype.PLAIN) return c.plus(a);
+    		    d = a.digits, d > 0 && (c.mant.length > d && (c = this.clone(c).round(a)), b.mant.length > d && (b = this.clone(b).round(a))), e = new BigDecimal, f = c.mant, g = c.mant.length, h = b.mant, i = b.mant.length;
+    		    do
+    		        if (c.exp == b.exp) e.exp = c.exp;
+    		        else if (c.exp > b.exp) {
+    		        if (j = g + c.exp - b.exp, j >= i + d + 1 && d > 0) return e.mant = f, e.exp = c.exp, e.ind = c.ind, g < d && (e.mant = this.extend(c.mant, d), e.exp = e.exp - (d - g)), e.finish(a, !1);
+    		        e.exp = b.exp, j > d + 1 && d > 0 && (k = j - d - 1, i -= k, e.exp = e.exp + k, j = d + 1), j > g && (g = j)
+    		    } else {
+    		        if (j = i + b.exp - c.exp, j >= g + d + 1 && d > 0) return e.mant = h, e.exp = b.exp, e.ind = b.ind, i < d && (e.mant = this.extend(b.mant, d), e.exp = e.exp - (d - i)), e.finish(a, !1);
+    		        e.exp = c.exp, j > d + 1 && d > 0 && (k = j - d - 1, g -= k, e.exp = e.exp + k, j = d + 1), j > i && (i = j)
+    		    }
+    		    while (!1);
+    		    if (c.ind == this.iszero ? e.ind = this.ispos : e.ind = c.ind, (c.ind == this.isneg ? 1 : 0) == (b.ind == this.isneg ? 1 : 0)) l = 1;
+    		    else
+    		        do {
+    		            l = -1;
+    		            do
+    		                if (b.ind == this.iszero);
+    		                else if (g < i || c.ind == this.iszero) m = f, f = h, h = m, k = g, g = i, i = k, e.ind = -e.ind;
+    		            else if (g > i);
+    		            else {
+    		                n = 0, o = 0, p = f.length - 1, q = h.length - 1;
+    		                a: for (;;) {
+    		                    if (n <= p) r = f[n];
+    		                    else {
+    		                        if (o > q) {
+    		                            if (a.form != MathContext.prototype.PLAIN) return this.ZERO;
+    		                            break a
+    		                        }
+    		                        r = 0
+    		                    }
+    		                    if (s = o <= q ? h[o] : 0, r != s) {
+    		                        r < s && (m = f, f = h, h = m, k = g, g = i, i = k, e.ind = -e.ind);
+    		                        break a
+    		                    }
+    		                    n++, o++
+    		                }
+    		            }
+    		            while (!1)
+    		        } while (!1);
+    		    return e.mant = this.byteaddsub(f, g, h, i, l, !1), e.finish(a, !1)
+    		}
+
+    		function compareTo() {
+    		    var a;
+    		    if (2 == compareTo.arguments.length) a = compareTo.arguments[1];
+    		    else {
+    		        if (1 != compareTo.arguments.length) throw "compareTo(): " + compareTo.arguments.length + " arguments given; expected 1 or 2";
+    		        a = this.plainMC
+    		    }
+    		    var e, b = compareTo.arguments[0],
+    		        c = 0,
+    		        d = 0;
+    		    if (a.lostDigits && this.checkdigits(b, a.digits), this.ind == b.ind && this.exp == b.exp) {
+    		        if (c = this.mant.length, c < b.mant.length) return -this.ind;
+    		        if (c > b.mant.length) return this.ind;
+    		        if (c <= a.digits || 0 == a.digits) {
+    		            var f = c;
+    		            for (d = 0; f > 0; f--, d++) {
+    		                if (this.mant[d] < b.mant[d]) return -this.ind;
+    		                if (this.mant[d] > b.mant[d]) return this.ind
+    		            }
+    		            return 0
+    		        }
+    		    } else {
+    		        if (this.ind < b.ind) return -1;
+    		        if (this.ind > b.ind) return 1
+    		    }
+    		    return e = this.clone(b), e.ind = -e.ind, this.add(e, a).ind
+    		}
+
+    		function divide() {
+    		    var a, b = -1;
+    		    if (2 == divide.arguments.length) a = "number" == typeof divide.arguments[1] ? new MathContext(0, MathContext.prototype.PLAIN, !1, divide.arguments[1]) : divide.arguments[1];
+    		    else if (3 == divide.arguments.length) {
+    		        if (b = divide.arguments[1], b < 0) throw "divide(): Negative scale: " + b;
+    		        a = new MathContext(0, MathContext.prototype.PLAIN, !1, divide.arguments[2])
+    		    } else {
+    		        if (1 != divide.arguments.length) throw "divide(): " + divide.arguments.length + " arguments given; expected between 1 and 3";
+    		        a = this.plainMC
+    		    }
+    		    var c = divide.arguments[0];
+    		    return this.dodivide("D", c, a, b)
+    		}
+
+    		function divideInteger() {
+    		    var a;
+    		    if (2 == divideInteger.arguments.length) a = divideInteger.arguments[1];
+    		    else {
+    		        if (1 != divideInteger.arguments.length) throw "divideInteger(): " + divideInteger.arguments.length + " arguments given; expected 1 or 2";
+    		        a = this.plainMC
+    		    }
+    		    var b = divideInteger.arguments[0];
+    		    return this.dodivide("I", b, a, 0)
+    		}
+
+    		function max() {
+    		    var a;
+    		    if (2 == max.arguments.length) a = max.arguments[1];
+    		    else {
+    		        if (1 != max.arguments.length) throw "max(): " + max.arguments.length + " arguments given; expected 1 or 2";
+    		        a = this.plainMC
+    		    }
+    		    var b = max.arguments[0];
+    		    return this.compareTo(b, a) >= 0 ? this.plus(a) : b.plus(a)
+    		}
+
+    		function min() {
+    		    var a;
+    		    if (2 == min.arguments.length) a = min.arguments[1];
+    		    else {
+    		        if (1 != min.arguments.length) throw "min(): " + min.arguments.length + " arguments given; expected 1 or 2";
+    		        a = this.plainMC
+    		    }
+    		    var b = min.arguments[0];
+    		    return this.compareTo(b, a) <= 0 ? this.plus(a) : b.plus(a)
+    		}
+
+    		function multiply() {
+    		    var a;
+    		    if (2 == multiply.arguments.length) a = multiply.arguments[1];
+    		    else {
+    		        if (1 != multiply.arguments.length) throw "multiply(): " + multiply.arguments.length + " arguments given; expected 1 or 2";
+    		        a = this.plainMC
+    		    }
+    		    var c, d, e, h, j, k, b = multiply.arguments[0],
+    		        f = null,
+    		        g = null,
+    		        i = 0,
+    		        l = 0,
+    		        m = 0;
+    		    a.lostDigits && this.checkdigits(b, a.digits), c = this, d = 0, e = a.digits, e > 0 ? (c.mant.length > e && (c = this.clone(c).round(a)), b.mant.length > e && (b = this.clone(b).round(a))) : (c.exp > 0 && (d += c.exp), b.exp > 0 && (d += b.exp)), c.mant.length < b.mant.length ? (f = c.mant, g = b.mant) : (f = b.mant, g = c.mant), h = f.length + g.length - 1, i = f[0] * g[0] > 9 ? h + 1 : h, j = new BigDecimal, k = this.createArrayWithZeros(i);
+    		    var n = f.length;
+    		    for (l = 0; n > 0; n--, l++) m = f[l], 0 != m && (k = this.byteaddsub(k, k.length, g, h, m, !0)), h--;
+    		    return j.ind = c.ind * b.ind, j.exp = c.exp + b.exp - d, 0 == d ? j.mant = k : j.mant = this.extend(k, k.length + d), j.finish(a, !1)
+    		}
+
+    		function negate() {
+    		    var a;
+    		    if (1 == negate.arguments.length) a = negate.arguments[0];
+    		    else {
+    		        if (0 != negate.arguments.length) throw "negate(): " + negate.arguments.length + " arguments given; expected 0 or 1";
+    		        a = this.plainMC
+    		    }
+    		    var b;
+    		    return a.lostDigits && this.checkdigits(null, a.digits), b = this.clone(this), b.ind = -b.ind, b.finish(a, !1)
+    		}
+
+    		function plus() {
+    		    var a;
+    		    if (1 == plus.arguments.length) a = plus.arguments[0];
+    		    else {
+    		        if (0 != plus.arguments.length) throw "plus(): " + plus.arguments.length + " arguments given; expected 0 or 1";
+    		        a = this.plainMC
+    		    }
+    		    if (a.lostDigits && this.checkdigits(null, a.digits), a.form == MathContext.prototype.PLAIN && this.form == MathContext.prototype.PLAIN) {
+    		        if (this.mant.length <= a.digits) return this;
+    		        if (0 == a.digits) return this
+    		    }
+    		    return this.clone(this).finish(a, !1)
+    		}
+
+    		function pow() {
+    		    var a;
+    		    if (2 == pow.arguments.length) a = pow.arguments[1];
+    		    else {
+    		        if (1 != pow.arguments.length) throw "pow(): " + pow.arguments.length + " arguments given; expected 1 or 2";
+    		        a = this.plainMC
+    		    }
+    		    var c, d, e, h, i, j, b = pow.arguments[0],
+    		        f = 0,
+    		        g = 0,
+    		        k = 0;
+    		    if (a.lostDigits && this.checkdigits(b, a.digits), c = b.intcheck(this.MinArg, this.MaxArg), d = this, e = a.digits, 0 == e) {
+    		        if (b.ind == this.isneg) throw "pow(): Negative power: " + b.toString();
+    		        f = 0
+    		    } else {
+    		        if (b.mant.length + b.exp > e) throw "pow(): Too many digits: " + b.toString();
+    		        d.mant.length > e && (d = this.clone(d).round(a)), g = b.mant.length + b.exp, f = e + g + 1
+    		    }
+    		    if (h = new MathContext(f, a.form, !1, a.roundingMode), i = this.ONE, 0 == c) return i;
+    		    c < 0 && (c = -c), j = !1, k = 1;
+    		    a: for (; c <<= 1, c < 0 && (j = !0, i = i.multiply(d, h)), 31 != k; k++) j && (i = i.multiply(i, h));
+    		    return b.ind < 0 && (i = this.ONE.divide(i, h)), i.finish(a, !0)
+    		}
+
+    		function remainder() {
+    		    var a;
+    		    if (2 == remainder.arguments.length) a = remainder.arguments[1];
+    		    else {
+    		        if (1 != remainder.arguments.length) throw "remainder(): " + remainder.arguments.length + " arguments given; expected 1 or 2";
+    		        a = this.plainMC
+    		    }
+    		    var b = remainder.arguments[0];
+    		    return this.dodivide("R", b, a, -1)
+    		}
+
+    		function subtract() {
+    		    var a;
+    		    if (2 == subtract.arguments.length) a = subtract.arguments[1];
+    		    else {
+    		        if (1 != subtract.arguments.length) throw "subtract(): " + subtract.arguments.length + " arguments given; expected 1 or 2";
+    		        a = this.plainMC
+    		    }
+    		    var c, b = subtract.arguments[0];
+    		    return a.lostDigits && this.checkdigits(b, a.digits), c = this.clone(b), c.ind = -c.ind, this.add(c, a)
+    		}
+
+    		function equals(a) {
+    		    var b, c = 0,
+    		        d = null,
+    		        e = null;
+    		    if (null == a) return !1;
+    		    if (!(a instanceof BigDecimal)) return !1;
+    		    if (b = a, this.ind != b.ind) return !1;
+    		    if (this.mant.length == b.mant.length && this.exp == b.exp && this.form == b.form) {
+    		        var f = this.mant.length;
+    		        for (c = 0; f > 0; f--, c++)
+    		            if (this.mant[c] != b.mant[c]) return !1
+    		    } else {
+    		        if (d = this.layout(), e = b.layout(), d.length != e.length) return !1;
+    		        var g = d.length;
+    		        for (c = 0; g > 0; g--, c++)
+    		            if (d[c] != e[c]) return !1
+    		    }
+    		    return !0
+    		}
+
+    		function format() {
+    		    var a, b, c, d;
+    		    if (6 == format.arguments.length) a = format.arguments[2], b = format.arguments[3], c = format.arguments[4], d = format.arguments[5];
+    		    else {
+    		        if (2 != format.arguments.length) throw "format(): " + format.arguments.length + " arguments given; expected 2 or 6";
+    		        a = -1, b = -1, c = MathContext.prototype.SCIENTIFIC, d = this.ROUND_HALF_UP
+    		    }
+    		    var g, o, e = format.arguments[0],
+    		        f = format.arguments[1],
+    		        h = 0,
+    		        i = 0,
+    		        j = 0,
+    		        k = null,
+    		        l = 0,
+    		        m = 0,
+    		        n = 0,
+    		        p = 0,
+    		        q = null,
+    		        r = 0,
+    		        s = 0;
+    		    if ((e < -1 || 0 == e) && this.badarg("format", 1, e), f < -1 && this.badarg("format", 2, f), (a < -1 || 0 == a) && this.badarg("format", 3, a), b < -1 && this.badarg("format", 4, b), c == MathContext.prototype.SCIENTIFIC || c == MathContext.prototype.ENGINEERING || (c == -1 ? c = MathContext.prototype.SCIENTIFIC : this.badarg("format", 5, c)), d != this.ROUND_HALF_UP) try {
+    		        d == -1 ? d = this.ROUND_HALF_UP : new MathContext(9, MathContext.prototype.SCIENTIFIC, !1, d)
+    		    } catch (a) {
+    		        this.badarg("format", 6, d)
+    		    }
+    		    g = this.clone(this);
+    		    do b == -1 ? g.form = MathContext.prototype.PLAIN : g.ind == this.iszero ? g.form = MathContext.prototype.PLAIN : (h = g.exp + g.mant.length, h > b ? g.form = c : h < -5 ? g.form = c : g.form = MathContext.prototype.PLAIN); while (!1);
+    		    if (f >= 0) a: for (; g.form == MathContext.prototype.PLAIN ? i = -g.exp : g.form == MathContext.prototype.SCIENTIFIC ? i = g.mant.length - 1 : (j = (g.exp + g.mant.length - 1) % 3, j < 0 && (j = 3 + j), j++, i = j >= g.mant.length ? 0 : g.mant.length - j), i != f;) {
+    		        if (i < f) {
+    		            if (k = this.extend(g.mant, g.mant.length + f - i), g.mant = k, g.exp = g.exp - (f - i), g.exp < this.MinExp) throw "format(): Exponent Overflow: " + g.exp;
+    		            break a
+    		        }
+    		        if (l = i - f, l > g.mant.length) g.mant = this.ZERO.mant, g.ind = this.iszero, g.exp = 0;
+    		        else if (m = g.mant.length - l, n = g.exp, g.round(m, d), g.exp - n == l) break a
+    		    }
+    		    if (o = g.layout(), e > 0) {
+    		        var t = o.length;
+    		        p = 0;
+    		        a: for (; t > 0 && "." != o[p] && "E" != o[p]; t--, p++);
+    		        if (p > e && this.badarg("format", 1, e), p < e) {
+    		            q = new Array(o.length + e - p);
+    		            var u = e - p;
+    		            for (r = 0; u > 0; u--, r++) q[r] = " ";
+    		            this.arraycopy(o, 0, q, r, o.length), o = q
+    		        }
+    		    }
+    		    if (a > 0) {
+    		        var v = o.length - 1;
+    		        p = o.length - 1;
+    		        a: for (; v > 0 && "E" != o[p]; v--, p--);
+    		        if (0 == p) {
+    		            q = new Array(o.length + a + 2), this.arraycopy(o, 0, q, 0, o.length);
+    		            var w = a + 2;
+    		            for (r = o.length; w > 0; w--, r++) q[r] = " ";
+    		            o = q
+    		        } else if (s = o.length - p - 2, s > a && this.badarg("format", 3, a), s < a) {
+    		            q = new Array(o.length + a - s), this.arraycopy(o, 0, q, 0, p + 2);
+    		            var x = a - s;
+    		            for (r = p + 2; x > 0; x--, r++) q[r] = "0";
+    		            this.arraycopy(o, p + 2, q, r, s), o = q
+    		        }
+    		    }
+    		    return o.join("")
+    		}
+
+    		function intValueExact() {
+    		    var a, c, b = 0,
+    		        d = 0,
+    		        e = 0;
+    		    if (this.ind == this.iszero) return 0;
+    		    if (a = this.mant.length - 1, this.exp < 0) {
+    		        if (a += this.exp, !this.allzero(this.mant, a + 1)) throw "intValueExact(): Decimal part non-zero: " + this.toString();
+    		        if (a < 0) return 0;
+    		        b = 0
+    		    } else {
+    		        if (this.exp + a > 9) throw "intValueExact(): Conversion overflow: " + this.toString();
+    		        b = this.exp
+    		    }
+    		    c = 0;
+    		    var f = a + b;
+    		    for (d = 0; d <= f; d++) c *= 10, d <= a && (c += this.mant[d]);
+    		    if (a + b == 9 && (e = div(c, 1e9), e != this.mant[0])) {
+    		        if (c == -2147483648 && this.ind == this.isneg && 2 == this.mant[0]) return c;
+    		        throw "intValueExact(): Conversion overflow: " + this.toString()
+    		    }
+    		    return this.ind == this.ispos ? c : -c
+    		}
+
+    		function movePointLeft(a) {
+    		    var b;
+    		    return b = this.clone(this), b.exp = b.exp - a, b.finish(this.plainMC, !1)
+    		}
+
+    		function movePointRight(a) {
+    		    var b;
+    		    return b = this.clone(this), b.exp = b.exp + a, b.finish(this.plainMC, !1)
+    		}
+
+    		function scale() {
+    		    return this.exp >= 0 ? 0 : -this.exp
+    		}
+
+    		function setScale() {
+    		    var a;
+    		    if (2 == setScale.arguments.length) a = setScale.arguments[1];
+    		    else {
+    		        if (1 != setScale.arguments.length) throw "setScale(): " + setScale.arguments.length + " given; expected 1 or 2";
+    		        a = this.ROUND_UNNECESSARY
+    		    }
+    		    var c, d, b = setScale.arguments[0],
+    		        e = 0,
+    		        f = 0;
+    		    if (c = this.scale(), c == b && this.form == MathContext.prototype.PLAIN) return this;
+    		    if (d = this.clone(this), c <= b) e = 0 == c ? d.exp + b : b - c, d.mant = this.extend(d.mant, d.mant.length + e), d.exp = -b;
+    		    else {
+    		        if (b < 0) throw "setScale(): Negative scale: " + b;
+    		        f = d.mant.length - (c - b), d = d.round(f, a), d.exp != -b && (d.mant = this.extend(d.mant, d.mant.length + 1), d.exp = d.exp - 1)
+    		    }
+    		    return d.form = MathContext.prototype.PLAIN, d
+    		}
+
+    		function signum() {
+    		    return this.ind
+    		}
+
+    		function toString() {
+    		    return this.layout().join("")
+    		}
+
+    		function layout() {
+    		    var a, h, i, b = 0,
+    		        c = null,
+    		        d = 0,
+    		        e = 0,
+    		        f = 0,
+    		        g = null,
+    		        j = 0;
+    		    a = new Array(this.mant.length);
+    		    var k = this.mant.length;
+    		    for (b = 0; k > 0; k--, b++) a[b] = this.mant[b] + "";
+    		    if (this.form != MathContext.prototype.PLAIN) {
+    		        if (c = "", this.ind == this.isneg && (c += "-"), d = this.exp + a.length - 1, this.form == MathContext.prototype.SCIENTIFIC) c += a[0], a.length > 1 && (c += "."), c += a.slice(1).join("");
+    		        else
+    		            do
+    		                if (e = d % 3, e < 0 && (e = 3 + e), d -= e, e++, e >= a.length) {
+    		                    c += a.join("");
+    		                    for (var l = e - a.length; l > 0; l--) c += "0"
+    		                } else c += a.slice(0, e).join(""), c += ".", c += a.slice(e).join(""); while (!1);
+    		        return 0 != d && (d < 0 ? (f = "-", d = -d) : f = "+", c += "E", c += f, c += d), c.split("")
+    		    }
+    		    if (0 == this.exp) return this.ind >= 0 ? a : (g = new Array(a.length + 1), g[0] = "-", this.arraycopy(a, 0, g, 1, a.length), g);
+    		    if (h = this.ind == this.isneg ? 1 : 0, i = this.exp + a.length, i < 1) {
+    		        j = h + 2 - this.exp, g = new Array(j), 0 != h && (g[0] = "-"), g[h] = "0", g[h + 1] = ".";
+    		        var m = -i;
+    		        for (b = h + 2; m > 0; m--, b++) g[b] = "0";
+    		        return this.arraycopy(a, 0, g, h + 2 - i, a.length), g
+    		    }
+    		    if (i > a.length) {
+    		        j = h + i, g = new Array(j), 0 != h && (g[0] = "-"), this.arraycopy(a, 0, g, h, a.length);
+    		        var n = i - a.length;
+    		        for (b = h + a.length; n > 0; n--, b++) g[b] = "0";
+    		        return g
+    		    }
+    		    return j = h + 1 + a.length, g = new Array(j), 0 != h && (g[0] = "-"), this.arraycopy(a, 0, g, h, i), g[h + i] = ".", this.arraycopy(a, i, g, h + i + 1, a.length - i), g
+    		}
+
+    		function intcheck(a, b) {
+    		    var c;
+    		    if (c = this.intValueExact(), c < a || c > b) throw "intcheck(): Conversion overflow: " + c;
+    		    return c
+    		}
+
+    		function dodivide(a, b, c, d) {
+    		    var e, f, g, h, i, j, k, l, m, n, o, p = 0,
+    		        q = 0,
+    		        r = 0,
+    		        s = 0,
+    		        t = 0,
+    		        u = 0,
+    		        v = 0,
+    		        w = 0,
+    		        x = null,
+    		        y = 0,
+    		        z = 0,
+    		        A = null;
+    		    if (c.lostDigits && this.checkdigits(b, c.digits), e = this, 0 == b.ind) throw "dodivide(): Divide by 0";
+    		    if (0 == e.ind) return c.form != MathContext.prototype.PLAIN ? this.ZERO : d == -1 ? e : e.setScale(d);
+    		    if (f = c.digits, f > 0 ? (e.mant.length > f && (e = this.clone(e).round(c)), b.mant.length > f && (b = this.clone(b).round(c))) : (d == -1 && (d = e.scale()), f = e.mant.length, d != -e.exp && (f = f + d + e.exp), f = f - (b.mant.length - 1) - b.exp, f < e.mant.length && (f = e.mant.length), f < b.mant.length && (f = b.mant.length)), g = e.exp - b.exp + e.mant.length - b.mant.length, g < 0 && "D" != a) return "I" == a ? this.ZERO : this.clone(e).finish(c, !1);
+    		    h = new BigDecimal, h.ind = e.ind * b.ind, h.exp = g, h.mant = this.createArrayWithZeros(f + 1), i = f + f + 1, j = this.extend(e.mant, i), k = i, l = b.mant, m = i, n = 10 * l[0] + 1, l.length > 1 && (n += l[1]), o = 0;
+    		    a: for (;;) {
+    		        p = 0;
+    		        b: for (; !(k < m);) {
+    		            if (k == m) {
+    		                c: do {
+    		                    var B = k;
+    		                    for (q = 0; B > 0; B--, q++) {
+    		                        if (r = q < l.length ? l[q] : 0, j[q] < r) break b;
+    		                        if (j[q] > r) break c
+    		                    }
+    		                    p++, h.mant[o] = p, o++, j[0] = 0;
+    		                    break a
+    		                } while (!1);s = j[0]
+    		            }
+    		            else s = 10 * j[0], k > 1 && (s += j[1]);
+    		            if (t = div(10 * s, n), 0 == t && (t = 1), p += t, j = this.byteaddsub(j, k, l, m, -t, !0), 0 == j[0]) {
+    		                var C = k - 2;
+    		                u = 0;
+    		                c: for (; u <= C && 0 == j[u]; u++) k--;
+    		                0 != u && this.arraycopy(j, u, j, 0, k)
+    		            }
+    		        }
+    		        if (0 != o || 0 != p) {
+    		            if (h.mant[o] = p, o++, o == f + 1) break a;
+    		            if (0 == j[0]) break a
+    		        }
+    		        if (d >= 0 && -h.exp > d) break a;
+    		        if ("D" != a && h.exp <= 0) break a;
+    		        h.exp = h.exp - 1, m--
+    		    }
+    		    if (0 == o && (o = 1), "I" == a || "R" == a) {
+    		        if (o + h.exp > f) throw "dodivide(): Integer overflow";
+    		        if ("R" == a)
+    		            do {
+    		                if (0 == h.mant[0]) return this.clone(e).finish(c, !1);
+    		                if (0 == j[0]) return this.ZERO;
+    		                h.ind = e.ind, v = f + f + 1 - e.mant.length, h.exp = h.exp - v + e.exp, w = k, q = w - 1;
+    		                a: for (; q >= 1 && (h.exp < e.exp && h.exp < b.exp) && 0 == j[q]; q--) w--, h.exp = h.exp + 1;
+    		                return w < j.length && (x = new Array(w), this.arraycopy(j, 0, x, 0, w), j = x), h.mant = j, h.finish(c, !1)
+    		            } while (!1)
+    		    } else 0 != j[0] && (y = h.mant[o - 1], y % 5 == 0 && (h.mant[o - 1] = y + 1));
+    		    if (d >= 0)
+    		        do return o != h.mant.length && (h.exp = h.exp - (h.mant.length - o)), z = h.mant.length - (-h.exp - d), h.round(z, c.roundingMode), h.exp != -d && (h.mant = this.extend(h.mant, h.mant.length + 1), h.exp = h.exp - 1), h.finish(c, !0); while (!1);
+    		    if (o == h.mant.length) h.round(c), o = f;
+    		    else {
+    		        if (0 == h.mant[0]) return this.ZERO;
+    		        A = new Array(o), this.arraycopy(h.mant, 0, A, 0, o), h.mant = A
+    		    }
+    		    return h.finish(c, !0)
+    		}
+
+    		function bad(a, b) {
+    		    throw a + "Not a number: " + b
+    		}
+
+    		function badarg(a, b, c) {
+    		    throw "Bad argument " + b + " to " + a + ": " + c
+    		}
+
+    		function extend(a, b) {
+    		    var c;
+    		    return a.length == b ? a : (c = createArrayWithZeros(b), this.arraycopy(a, 0, c, 0, a.length), c)
+    		}
+
+    		function byteaddsub(a, b, c, d, e, f) {
+    		    var g, h, i, j, k, l, m, n, q, o = 0,
+    		        p = 0,
+    		        r = 0;
+    		    g = a.length, h = c.length, i = b - 1, j = d - 1, k = j, k < i && (k = i), l = null, f && k + 1 == g && (l = a), null == l && (l = this.createArrayWithZeros(k + 1)), m = !1, 1 == e ? m = !0 : e == -1 && (m = !0), n = 0, o = k;
+    		    a: for (; o >= 0; o--) {
+    		        if (i >= 0 && (i < g && (n += a[i]), i--), j >= 0 && (j < h && (m ? e > 0 ? n += c[j] : n -= c[j] : n += c[j] * e), j--), n < 10 && n >= 0)
+    		            do {
+    		                l[o] = n, n = 0;
+    		                continue a
+    		            } while (!1);
+    		        p = n + 90, l[o] = this.bytedig[p], n = this.bytecar[p]
+    		    }
+    		    if (0 == n) return l;
+    		    q = null, f && k + 2 == a.length && (q = a), null == q && (q = new Array(k + 2)), q[0] = n;
+    		    var s = k + 1;
+    		    for (r = 0; s > 0; s--, r++) q[r + 1] = l[r];
+    		    return q
+    		}
+
+    		function diginit() {
+    		    var a, b = 0,
+    		        c = 0;
+    		    for (a = new Array(190), b = 0; b <= 189; b++) c = b - 90, c >= 0 ? (a[b] = c % 10, BigDecimal.prototype.bytecar[b] = div(c, 10)) : (c += 100, a[b] = c % 10, BigDecimal.prototype.bytecar[b] = div(c, 10) - 10);
+    		    return a
+    		}
+
+    		function clone(a) {
+    		    var b;
+    		    return b = new BigDecimal, b.ind = a.ind, b.exp = a.exp, b.form = a.form, b.mant = a.mant, b
+    		}
+
+    		function checkdigits(a, b) {
+    		    if (0 != b) {
+    		        if (this.mant.length > b && !this.allzero(this.mant, b)) throw "Too many digits: " + this.toString();
+    		        if (null != a && a.mant.length > b && !this.allzero(a.mant, b)) throw "Too many digits: " + a.toString()
+    		    }
+    		}
+
+    		function round() {
+    		    var a, b;
+    		    if (2 == round.arguments.length) a = round.arguments[0], b = round.arguments[1];
+    		    else {
+    		        if (1 != round.arguments.length) throw "round(): " + round.arguments.length + " arguments given; expected 1 or 2";
+    		        var c = round.arguments[0];
+    		        a = c.digits, b = c.roundingMode
+    		    }
+    		    var d, e, f, i, g = !1,
+    		        h = 0,
+    		        j = null;
+    		    if (d = this.mant.length - a, d <= 0) return this;
+    		    this.exp = this.exp + d, e = this.ind, f = this.mant, a > 0 ? (this.mant = new Array(a), this.arraycopy(f, 0, this.mant, 0, a), g = !0, h = f[a]) : (this.mant = this.ZERO.mant, this.ind = this.iszero, g = !1, h = 0 == a ? f[0] : 0), i = 0;
+    		    do
+    		        if (b == this.ROUND_HALF_UP) h >= 5 && (i = e);
+    		        else if (b == this.ROUND_UNNECESSARY) {
+    		        if (!this.allzero(f, a)) throw "round(): Rounding necessary"
+    		    } else if (b == this.ROUND_HALF_DOWN) h > 5 ? i = e : 5 == h && (this.allzero(f, a + 1) || (i = e));
+    		    else if (b == this.ROUND_HALF_EVEN) h > 5 ? i = e : 5 == h && (this.allzero(f, a + 1) ? this.mant[this.mant.length - 1] % 2 == 1 && (i = e) : i = e);
+    		    else if (b == this.ROUND_DOWN);
+    		    else if (b == this.ROUND_UP) this.allzero(f, a) || (i = e);
+    		    else if (b == this.ROUND_CEILING) e > 0 && (this.allzero(f, a) || (i = e));
+    		    else {
+    		        if (b != this.ROUND_FLOOR) throw "round(): Bad round value: " + b;
+    		        e < 0 && (this.allzero(f, a) || (i = e))
+    		    }
+    		    while (!1);
+    		    if (0 != i)
+    		        do this.ind == this.iszero ? (this.mant = this.ONE.mant, this.ind = i) : (this.ind == this.isneg && (i = -i), j = this.byteaddsub(this.mant, this.mant.length, this.ONE.mant, 1, i, g), j.length > this.mant.length ? (this.exp++, this.arraycopy(j, 0, this.mant, 0, this.mant.length)) : this.mant = j); while (!1);
+    		    if (this.exp > this.MaxExp) throw "round(): Exponent Overflow: " + this.exp;
+    		    return this
+    		}
+
+    		function allzero(a, b) {
+    		    var c = 0;
+    		    b < 0 && (b = 0);
+    		    var d = a.length - 1;
+    		    for (c = b; c <= d; c++)
+    		        if (0 != a[c]) return !1;
+    		    return !0
+    		}
+
+    		function finish(a, b) {
+    		    var c = 0,
+    		        d = 0,
+    		        e = null,
+    		        f = 0,
+    		        g = 0;
+    		    if (0 != a.digits && this.mant.length > a.digits && this.round(a), b && a.form != MathContext.prototype.PLAIN) {
+    		        c = this.mant.length, d = c - 1;
+    		        a: for (; d >= 1 && 0 == this.mant[d]; d--) c--, this.exp++;
+    		        c < this.mant.length && (e = new Array(c), this.arraycopy(this.mant, 0, e, 0, c), this.mant = e)
+    		    }
+    		    this.form = MathContext.prototype.PLAIN;
+    		    var h = this.mant.length;
+    		    for (d = 0; h > 0; h--, d++)
+    		        if (0 != this.mant[d]) {
+    		            if (d > 0)
+    		                do e = new Array(this.mant.length - d), this.arraycopy(this.mant, d, e, 0, this.mant.length - d), this.mant = e; while (!1);
+    		            if (f = this.exp + this.mant.length, f > 0) {
+    		                if (f > a.digits && 0 != a.digits && (this.form = a.form), f - 1 <= this.MaxExp) return this
+    		            } else f < -5 && (this.form = a.form);
+    		            if (f--, f < this.MinExp || f > this.MaxExp) a: do {
+    		                if (this.form == MathContext.prototype.ENGINEERING && (g = f % 3, g < 0 && (g = 3 + g), f -= g, f >= this.MinExp && f <= this.MaxExp)) break a;
+    		                throw "finish(): Exponent Overflow: " + f
+    		            } while (!1);
+    		            return this
+    		        }
+    		    if (this.ind = this.iszero, a.form != MathContext.prototype.PLAIN) this.exp = 0;
+    		    else if (this.exp > 0) this.exp = 0;
+    		    else if (this.exp < this.MinExp) throw "finish(): Exponent Overflow: " + this.exp;
+    		    return this.mant = this.ZERO.mant, this
+    		}
+
+    		function isGreaterThan(a) {
+    		    return this.compareTo(a) > 0
+    		}
+
+    		function isLessThan(a) {
+    		    return this.compareTo(a) < 0
+    		}
+
+    		function isGreaterThanOrEqualTo(a) {
+    		    return this.compareTo(a) >= 0
+    		}
+
+    		function isLessThanOrEqualTo(a) {
+    		    return this.compareTo(a) <= 0
+    		}
+
+    		function isPositive() {
+    		    return this.compareTo(BigDecimal.prototype.ZERO) > 0
+    		}
+
+    		function isNegative() {
+    		    return this.compareTo(BigDecimal.prototype.ZERO) < 0
+    		}
+
+    		function isZero() {
+    		    return 0 === this.compareTo(BigDecimal.prototype.ZERO)
+    		}
+    		BigDecimal.prototype.div = div, BigDecimal.prototype.arraycopy = arraycopy, BigDecimal.prototype.createArrayWithZeros = createArrayWithZeros, BigDecimal.prototype.abs = abs, BigDecimal.prototype.add = add, BigDecimal.prototype.compareTo = compareTo, BigDecimal.prototype.divide = divide, BigDecimal.prototype.divideInteger = divideInteger, BigDecimal.prototype.max = max, BigDecimal.prototype.min = min, BigDecimal.prototype.multiply = multiply, BigDecimal.prototype.negate = negate, BigDecimal.prototype.plus = plus, BigDecimal.prototype.pow = pow, BigDecimal.prototype.remainder = remainder, BigDecimal.prototype.subtract = subtract, BigDecimal.prototype.equals = equals, BigDecimal.prototype.format = format, BigDecimal.prototype.intValueExact = intValueExact, BigDecimal.prototype.movePointLeft = movePointLeft, BigDecimal.prototype.movePointRight = movePointRight, BigDecimal.prototype.scale = scale, BigDecimal.prototype.setScale = setScale, BigDecimal.prototype.signum = signum, BigDecimal.prototype.toString = toString, BigDecimal.prototype.layout = layout, BigDecimal.prototype.intcheck = intcheck, BigDecimal.prototype.dodivide = dodivide, BigDecimal.prototype.bad = bad, BigDecimal.prototype.badarg = badarg, BigDecimal.prototype.extend = extend, BigDecimal.prototype.byteaddsub = byteaddsub, BigDecimal.prototype.diginit = diginit, BigDecimal.prototype.clone = clone, BigDecimal.prototype.checkdigits = checkdigits, BigDecimal.prototype.round = round, BigDecimal.prototype.allzero = allzero, BigDecimal.prototype.finish = finish, BigDecimal.prototype.isGreaterThan = isGreaterThan, BigDecimal.prototype.isLessThan = isLessThan, BigDecimal.prototype.isGreaterThanOrEqualTo = isGreaterThanOrEqualTo, BigDecimal.prototype.isLessThanOrEqualTo = isLessThanOrEqualTo, BigDecimal.prototype.isPositive = isPositive, BigDecimal.prototype.isNegative = isNegative, BigDecimal.prototype.isZero = isZero, BigDecimal.ROUND_CEILING = BigDecimal.prototype.ROUND_CEILING = MathContext.prototype.ROUND_CEILING, BigDecimal.ROUND_DOWN = BigDecimal.prototype.ROUND_DOWN = MathContext.prototype.ROUND_DOWN, BigDecimal.ROUND_FLOOR = BigDecimal.prototype.ROUND_FLOOR = MathContext.prototype.ROUND_FLOOR, BigDecimal.ROUND_HALF_DOWN = BigDecimal.prototype.ROUND_HALF_DOWN = MathContext.prototype.ROUND_HALF_DOWN, BigDecimal.ROUND_HALF_EVEN = BigDecimal.prototype.ROUND_HALF_EVEN = MathContext.prototype.ROUND_HALF_EVEN, BigDecimal.ROUND_HALF_UP = BigDecimal.prototype.ROUND_HALF_UP = MathContext.prototype.ROUND_HALF_UP, BigDecimal.ROUND_UNNECESSARY = BigDecimal.prototype.ROUND_UNNECESSARY = MathContext.prototype.ROUND_UNNECESSARY, BigDecimal.ROUND_UP = BigDecimal.prototype.ROUND_UP = MathContext.prototype.ROUND_UP, BigDecimal.prototype.ispos = 1, BigDecimal.prototype.iszero = 0, BigDecimal.prototype.isneg = -1, BigDecimal.prototype.MinExp = -999999999, BigDecimal.prototype.MaxExp = 999999999, BigDecimal.prototype.MinArg = -999999999, BigDecimal.prototype.MaxArg = 999999999, BigDecimal.prototype.plainMC = new MathContext(0, MathContext.prototype.PLAIN), BigDecimal.prototype.bytecar = new Array(190), BigDecimal.prototype.bytedig = diginit(), BigDecimal.ZERO = BigDecimal.prototype.ZERO = new BigDecimal("0"), BigDecimal.ONE = BigDecimal.prototype.ONE = new BigDecimal("1"),
+    		    BigDecimal.TEN = BigDecimal.prototype.TEN = new BigDecimal("10");
+    		return BigDecimal;
+		}());
+       math.BigDecimal = BigDecimal;	
+    })(util = java.math || (java.math = {}));
+})(java || (java = {}));

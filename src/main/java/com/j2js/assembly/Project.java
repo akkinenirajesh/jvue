@@ -332,12 +332,11 @@ public class Project implements Serializable {
 		if (val != null) {
 			return val;
 		}
-		try {
-			Class<?> cls = fileManager.getClassLoader().loadClass(fullName);
+		Class<?> cls = findClass(fullName);
+		if (cls != null) {
 			enums.put(fullName, cls.isEnum());
 			return cls.isEnum();
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
+		} else {
 			enums.put(fullName, false);
 			return false;
 		}
@@ -353,33 +352,37 @@ public class Project implements Serializable {
 			return map.get(name);
 		}
 		String res = name;
-		try {
-			Class<?> c = fileManager.getClassLoader().loadClass(cls);
-			while (c != null) {
-				try {
-					c.getDeclaredField(name);
-					res = "_" + name;
-					break;
-				} catch (Exception e) {
-					c = c.getSuperclass();
-				}
+		Class<?> c = findClass(cls);
+		while (c != null) {
+			try {
+				c.getDeclaredField(name);
+				res = "_" + name;
+				break;
+			} catch (Exception e) {
+				c = c.getSuperclass();
 			}
-
-			if (res.equals("<clinit>")) {
-				res = "staticBlock";
-			}
-			if (res.startsWith("lambda$")) {
-				res = TSHelper.getSimpleName(cls) + '$' + res;
-			}
-		} catch (Exception e) {
 		}
 
+		if (res.equals("<clinit>")) {
+			res = "staticBlock";
+		}
+		if (res.startsWith("lambda$")) {
+			res = TSHelper.getSimpleName(cls) + '$' + res;
+		}
 		map.put(name, res);
 		return res;
 	}
 
 	public J2JSSettings getSettings() {
 		return settings;
+	}
+
+	public Class<?> findClass(String cls) {
+		try {
+			return fileManager.getClassLoader().loadClass(cls);
+		} catch (ClassNotFoundException e) {
+			return null;
+		}
 	}
 
 	public static void clearSingleton() {

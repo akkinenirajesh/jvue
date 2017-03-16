@@ -56,8 +56,6 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 			}
 
 			if (list.size() == 1) {
-				generateMethod(ch, ps, name, list.get(0));
-
 				if (name.equals("constructor")) {
 					List<MethodContext> dummyList = new ArrayList<>();
 					MethodContext context = new MethodContext(input, null, dummyList);
@@ -65,8 +63,18 @@ public class ClassBody implements ExtInvocation<TypeContext> {
 					context.getParams().append("(");
 					generateParameters(ch, context.getParams(), 0);
 					context.getParams().append(")");
-					generateMethod(ch, ps, name + input.getType().getUnQualifiedName() + "0", context);
+					String consName = name + input.getType().getUnQualifiedName() + "0";
+					context.getBody().print("\t\t");
+					ch.invoke("this", context.getBody(), null);
+					context.getBody().print(".");
+					context.getBody().print(consName);
+					context.getBody().println("();");
+					generateMethod(ch, ps, name, context);
+					name = consName;
 				}
+
+				generateMethod(ch, ps, name, list.get(0));
+
 			} else {
 
 				generateOverloadMethod(ch, ps, input, name, list);

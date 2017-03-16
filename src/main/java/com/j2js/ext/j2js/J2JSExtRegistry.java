@@ -236,7 +236,7 @@ public class J2JSExtRegistry {
 
 			@Override
 			public void invoke(PrintStream ps, Tuple<String, MethodContext> input, ExtChain ch) {
-				if (input.getT().equals("constructor")) {
+				if (input.getT().startsWith("constructor") && input.getT().endsWith("0")) {
 					input.getR().getTypeContext().getFieldsStream().write(ps);
 				}
 				ps.println("\t};");
